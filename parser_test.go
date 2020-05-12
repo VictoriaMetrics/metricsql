@@ -260,6 +260,9 @@ func TestParseSuccess(t *testing.T) {
 	same(`sum(a) by () or sum(b) without (x, y)`)
 	same(`sum(a) + sum(b)`)
 	same(`sum(x) * (1 + sum(a))`)
+	same(`avg(x) limit 10`)
+	same(`avg(x) without (z, b) limit 1`)
+	another(`avg by(x) (z) limit 20`, `avg(z) by (x) limit 20`)
 
 	// All the above
 	another(`Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) * F2("Test")`,
@@ -335,7 +338,9 @@ func TestParseSuccess(t *testing.T) {
 
 	// Verify withExpr for aggr func modifiers
 	another(`with (f(x) = x, y = sum(m) by (f)) y`, `sum(m) by (f)`)
+	another(`with (f(x) = x, y = sum(m) by (f) limit 20) y`, `sum(m) by (f) limit 20`)
 	another(`with (f(x) = sum(m) by (x)) f(foo)`, `sum(m) by (foo)`)
+	another(`with (f(x) = sum(m) by (x) limit 42) f(foo)`, `sum(m) by (foo) limit 42`)
 	another(`with (f(x) = sum(m) by (x)) f((foo, bar, foo))`, `sum(m) by (foo, bar)`)
 	another(`with (f(x) = sum(m) without (x,y)) f((a, b))`, `sum(m) without (a, b, y)`)
 	another(`with (f(x) = sum(m) without (y,x)) f((a, y))`, `sum(m) without (y, a)`)
