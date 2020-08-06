@@ -5,6 +5,32 @@ import (
 	"testing"
 )
 
+func TestIsSpecialIntegerPrefix(t *testing.T) {
+	f := func(s string, resultExpected bool) {
+		t.Helper()
+		result := isSpecialIntegerPrefix(s)
+		if result != resultExpected {
+			t.Fatalf("unexpected result for isSpecialIntegerPrefix(%q); got %v; want %v", s, result, resultExpected)
+		}
+	}
+	f("", false)
+	f("1", false)
+	f("0", false)
+
+	// octal numbers
+	f("03", true)
+	f("0o1", true)
+	f("0O12", true)
+
+	// binary numbers
+	f("0b1110", true)
+	f("0B0", true)
+
+	// hex number
+	f("0x1ffa", true)
+	f("0X4", true)
+}
+
 func TestUnescapeIdent(t *testing.T) {
 	f := func(s, resultExpected string) {
 		t.Helper()
@@ -202,8 +228,8 @@ func TestLexerSuccess(t *testing.T) {
 	expectedTokens = []string{`3`, `+`, `1.2`, `-`, `.23`, `+`, `4.5e5`, `-`, `78e-6`, `+`, `1.24e+45`, `-`, `NaN`, `+`, `Inf`}
 	testLexerSuccess(t, s, expectedTokens)
 
-	s = `12.34`
-	expectedTokens = []string{`12.34`}
+	s = `12.34 * 0X34 + 0b11 + 0O77`
+	expectedTokens = []string{`12.34`, `*`, `0X34`, `+`, `0b11`, `+`, `0O77`}
 	testLexerSuccess(t, s, expectedTokens)
 
 	// Strings

@@ -138,6 +138,10 @@ func TestParseSuccess(t *testing.T) {
 	another(`+Inf`, `+Inf`)
 	another(`-Inf`, `-Inf`)
 	another(`-inF`, `-Inf`)
+	another(`0x12`, `18`)
+	another(`0b1011`, `11`)
+	another(`073`, `59`)
+	another(`-0o12`, `-10`)
 
 	// binaryOpExpr
 	another(`nan == nan`, `NaN`)
