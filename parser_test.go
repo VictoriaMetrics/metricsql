@@ -224,6 +224,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`"a">="b"`, `NaN`)
 	another(`"a">=bool"b"`, `0`)
 	another(`"a"<="b"`, `1`)
+	same(`"a" - "b"`)
 
 	// parensExpr
 	another(`(-foo + ((bar) / (baz))) + ((23))`, `((0 - foo) + (bar / baz)) + 23`)
