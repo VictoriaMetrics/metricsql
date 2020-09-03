@@ -211,9 +211,12 @@ func simplifyConstants(e Expr) Expr {
 	default:
 		panic(fmt.Errorf("BUG: unexpected comparison binaryOp: %q", be.Op))
 	}
-	n := nan
+	n := float64(0)
 	if ok {
 		n = 1
+	}
+	if !be.Bool && n == 0 {
+		n = nan
 	}
 	return &NumberExpr{
 		N: n,

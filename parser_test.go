@@ -219,8 +219,10 @@ func TestParseSuccess(t *testing.T) {
 	another(`"foo"!="bar"`, `1`)
 	another(`"foo"+"bar"+"baz"`, `"foobarbaz"`)
 	another(`"a">"b"`, `NaN`)
+	another(`"a">bool"b"`, `0`)
 	another(`"a"<"b"`, `1`)
 	another(`"a">="b"`, `NaN`)
+	another(`"a">=bool"b"`, `0`)
 	another(`"a"<="b"`, `1`)
 
 	// parensExpr
