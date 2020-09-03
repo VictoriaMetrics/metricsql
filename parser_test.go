@@ -85,6 +85,8 @@ func TestParseSuccess(t *testing.T) {
 	same(`foo\ bar`)
 	same(`foo\-bar\{{baz\+bar="aa"}`)
 	another(`\x2E\x2ef\oo{b\xEF\ar="aa"}`, `\x2e.foo{b\xefar="aa"}`)
+	same(`sum(fo\|o) by (b\|a, x)`)
+	another(`sum(x) by (b\x7Ca)`, `sum(x) by (b\|a)`)
 	// Duplicate filters
 	same(`foo{__name__="bar"}`)
 	same(`foo{a="b", a="c", __name__="aaa", b="d"}`)
