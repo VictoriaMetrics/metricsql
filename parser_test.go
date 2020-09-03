@@ -213,6 +213,15 @@ func TestParseSuccess(t *testing.T) {
 	another(`2+6 ifnot 2>3 default NaN`, `8`)
 	another(`42 if 3>2 ifnot 2+2<5`, `NaN`)
 	another(`42 if 3>2 ifnot 2+2>=5`, `42`)
+	another(`"foo" + "bar"`, `"foobar"`)
+	another(`"foo"=="bar"`, `NaN`)
+	another(`"foo"=="foo"`, `1`)
+	another(`"foo"!="bar"`, `1`)
+	another(`"foo"+"bar"+"baz"`, `"foobarbaz"`)
+	another(`"a">"b"`, `NaN`)
+	another(`"a"<"b"`, `1`)
+	another(`"a">="b"`, `NaN`)
+	another(`"a"<="b"`, `1`)
 
 	// parensExpr
 	another(`(-foo + ((bar) / (baz))) + ((23))`, `((0 - foo) + (bar / baz)) + 23`)
