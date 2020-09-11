@@ -325,6 +325,7 @@ func TestPositiveDurationSuccess(t *testing.T) {
 	}
 
 	// Integer durations
+	f("123ms", 42, 123)
 	f("123s", 42, 123*1000)
 	f("123m", 42, 123*60*1000)
 	f("1h", 42, 1*60*60*1000)
@@ -335,6 +336,7 @@ func TestPositiveDurationSuccess(t *testing.T) {
 	f("3i", 42, 3*42)
 
 	// Float durations
+	f("123.45ms", 42, 123)
 	f("0.234s", 42, 234)
 	f("1.5s", 42, 1.5*1000)
 	f("1.5m", 42, 1.5*60*1000)
@@ -382,6 +384,8 @@ func TestDurationSuccess(t *testing.T) {
 	}
 
 	// Integer durations
+	f("123ms", 42, 123)
+	f("-123ms", 42, -123)
 	f("123s", 42, 123*1000)
 	f("-123s", 42, -123*1000)
 	f("123m", 42, 123*60*1000)
@@ -394,6 +398,8 @@ func TestDurationSuccess(t *testing.T) {
 	f("-3i", 42, -3*42)
 
 	// Float durations
+	f("34.54ms", 42, 34)
+	f("-34.34ms", 42, -34)
 	f("0.234s", 42, 234)
 	f("-0.234s", 42, -234)
 	f("1.5s", 42, 1.5*1000)
@@ -424,4 +430,5 @@ func TestDurationError(t *testing.T) {
 	f("1.23")
 	f("1.23mm")
 	f("123q")
+	f("-123q")
 }

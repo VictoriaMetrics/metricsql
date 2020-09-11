@@ -419,27 +419,32 @@ func DurationValue(s string, step int64) (int64, error) {
 	if n != len(s) {
 		return 0, fmt.Errorf("cannot parse duration %q", s)
 	}
-
-	f, err := strconv.ParseFloat(s[:len(s)-1], 64)
+	numPart := s[:len(s)-1]
+	if strings.HasSuffix(numPart, "m") {
+		// Duration in ms
+		numPart = numPart[:len(numPart)-1]
+	}
+	f, err := strconv.ParseFloat(numPart, 64)
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse duration %q: %s", s, err)
 	}
-
 	var mp float64
-	switch s[len(s)-1] {
-	case 's':
+	switch s[len(numPart):] {
+	case "ms":
+		mp = 1e-3
+	case "s":
 		mp = 1
-	case 'm':
+	case "m":
 		mp = 60
-	case 'h':
+	case "h":
 		mp = 60 * 60
-	case 'd':
+	case "d":
 		mp = 24 * 60 * 60
-	case 'w':
+	case "w":
 		mp = 7 * 24 * 60 * 60
-	case 'y':
+	case "y":
 		mp = 365 * 24 * 60 * 60
-	case 'i':
+	case "i":
 		mp = float64(step) / 1e3
 	default:
 		return 0, fmt.Errorf("invalid duration suffix in %q", s)
@@ -472,7 +477,14 @@ func scanDuration(s string, canBeNegative bool) int {
 		}
 	}
 	switch s[i] {
-	case 's', 'm', 'h', 'd', 'w', 'y', 'i':
+	case 'm':
+		if i+1 < len(s) && s[i+1] == 's' {
+			// duration in ms
+			return i + 2
+		}
+		// duration in minutes
+		return i + 1
+	case 's', 'h', 'd', 'w', 'y', 'i':
 		return i + 1
 	default:
 		return -1

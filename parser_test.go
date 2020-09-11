@@ -43,6 +43,7 @@ func TestParseSuccess(t *testing.T) {
 	same(`{foo="bar"}[5m]`)
 	same(`{foo="bar"}[5m:]`)
 	same(`{foo="bar"}[5m:3s]`)
+	same(`{foo="bar"} offset 13.4ms`)
 	same(`{foo="bar"} offset 10y`)
 	same(`{foo="bar"} offset -10y`)
 	same(`{foo="bar"}[5m] offset 10y`)
