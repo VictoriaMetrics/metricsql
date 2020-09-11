@@ -103,7 +103,7 @@ again:
 		token = s[:n]
 		goto tokenFoundLabel
 	}
-	if n := scanDuration(s, false); n > 0 {
+	if n := scanDuration(s); n > 0 {
 		token = s[:n]
 		goto tokenFoundLabel
 	}
@@ -393,7 +393,7 @@ func scanSpecialIntegerPrefix(s string) int {
 }
 
 func isPositiveDuration(s string) bool {
-	n := scanDuration(s, false)
+	n := scanDuration(s)
 	return n == len(s)
 }
 
@@ -413,12 +413,31 @@ func PositiveDurationValue(s string, step int64) (int64, error) {
 // DurationValue returns the duration in milliseconds for the given s
 // and the given step.
 //
+// Duration in s may be combined, i.e. 2h5m or 2h-5m.
+//
 // The returned duration value can be negative.
 func DurationValue(s string, step int64) (int64, error) {
-	n := scanDuration(s, true)
-	if n != len(s) {
-		return 0, fmt.Errorf("cannot parse duration %q", s)
+	if len(s) == 0 {
+		return 0, fmt.Errorf("duration cannot be empty")
 	}
+	var d int64
+	for len(s) > 0 {
+		n := scanSingleDuration(s, true)
+		if n <= 0 {
+			return 0, fmt.Errorf("cannot parse duration %q", s)
+		}
+		ds := s[:n]
+		s = s[n:]
+		dLocal, err := parseSingleDuration(ds, step)
+		if err != nil {
+			return 0, err
+		}
+		d += dLocal
+	}
+	return d, nil
+}
+
+func parseSingleDuration(s string, step int64) (int64, error) {
 	numPart := s[:len(s)-1]
 	if strings.HasSuffix(numPart, "m") {
 		// Duration in ms
@@ -452,7 +471,29 @@ func DurationValue(s string, step int64) (int64, error) {
 	return int64(mp * f * 1e3), nil
 }
 
-func scanDuration(s string, canBeNegative bool) int {
+// scanDuration scans duration, which must start with positive num.
+//
+// I.e. 123h, 3h5m or 3.4d-35.66s
+func scanDuration(s string) int {
+	// The first part must be non-negative
+	n := scanSingleDuration(s, false)
+	if n <= 0 {
+		return -1
+	}
+	s = s[n:]
+	i := n
+	for {
+		// Other parts may be negative
+		n := scanSingleDuration(s, true)
+		if n <= 0 {
+			return i
+		}
+		s = s[n:]
+		i += n
+	}
+}
+
+func scanSingleDuration(s string, canBeNegative bool) int {
 	if len(s) == 0 {
 		return -1
 	}

@@ -237,6 +237,15 @@ func TestLexerSuccess(t *testing.T) {
 	expectedTokens = []string{`""`, `''`, "``", `"\\"`, `'\\'`, `"\""`, `'\''`, `"\\\"\\"`}
 	testLexerSuccess(t, s, expectedTokens)
 
+	// Various durations
+	s = `m offset 123h`
+	expectedTokens = []string{`m`, `offset`, `123h`}
+	testLexerSuccess(t, s, expectedTokens)
+
+	s = `m offset -1.23w-5h34.5m - 123`
+	expectedTokens = []string{`m`, `offset`, `-`, `1.23w-5h34.5m`, `-`, `123`}
+	testLexerSuccess(t, s, expectedTokens)
+
 	s = "   `foo\\\\\\`бар`  "
 	expectedTokens = []string{"`foo\\\\\\`бар`"}
 	testLexerSuccess(t, s, expectedTokens)
