@@ -31,4 +31,36 @@ func TestOptimize(t *testing.T) {
 	f(`foo * on (x, y) group_left() baz{a="b"}`, `foo * on (x, y) group_left () baz{a="b"}`)
 	f(`f(foo, bar{baz=~"sdf"} + aa{baz=~"axx", aa="b"})`, `f(foo, bar{aa="b", baz=~"axx", baz=~"sdf"} + aa{aa="b", baz=~"axx", baz=~"sdf"})`)
 	f(`sum(foo, bar{baz=~"sdf"} + aa{baz=~"axx", aa="b"})`, `sum(foo, bar{aa="b", baz=~"axx", baz=~"sdf"} + aa{aa="b", baz=~"axx", baz=~"sdf"})`)
+	f(`foo AND bar{baz="aa"}`, `foo{baz="aa"} and bar{baz="aa"}`)
+
+	// aggregate funcs
+	f(`sum(foo{bar="baz"}) / a{b="c"}`, `sum(foo{bar="baz"}) / a{b="c"}`)
+
+	// unknown func
+	f(`f(foo) + bar{baz="a"}`, `f(foo) + bar{baz="a"}`)
+
+	// transform funcs
+	f(`round(foo{bar="baz"}) + sqrt(a{z=~"c"})`, `round(foo{bar="baz", z=~"c"}) + sqrt(a{bar="baz", z=~"c"})`)
+	f(`foo{bar="baz"} + SQRT(a{z=~"c"})`, `foo{bar="baz", z=~"c"} + SQRT(a{bar="baz", z=~"c"})`)
+
+	// multilevel transform funcs
+	f(`round(sqrt(foo)) + bar`, `round(sqrt(foo)) + bar`)
+
+	// unsupported transform funcs
+	f(`absent(foo{bar="baz"}) + sqrt(a{z=~"c"})`, `absent(foo{bar="baz"}) + sqrt(a{z=~"c"})`)
+	f(`ABSENT(foo{bar="baz"}) + sqrt(a{z=~"c"})`, `ABSENT(foo{bar="baz"}) + sqrt(a{z=~"c"})`)
+
+	// rollup funcs
+	f(`RATE(foo[5m]) / rate(baz{a="b"}) + increase(x{y="z"} offset 5i)`, `(RATE(foo[5m]) / rate(baz{a="b"})) + increase(x{y="z"} offset 5i)`)
+
+	// subqueries
+	f(`rate(avg_over_time(foo[5m:])) + bar{baz="a"}`, `rate(avg_over_time(foo[5m:])) + bar{baz="a"}`)
+
+	// binary ops with constants or scalars
+	f(`100 * foo / bar{baz="a"}`, `(100 * foo{baz="a"}) / bar{baz="a"}`)
+	f(`foo * 100 / bar{baz="a"}`, `(foo{baz="a"} * 100) / bar{baz="a"}`)
+	f(`foo / bar{baz="a"} * 100`, `(foo{baz="a"} / bar{baz="a"}) * 100`)
+	f(`scalar(x) * foo / bar{baz="a"}`, `(scalar(x) * foo{baz="a"}) / bar{baz="a"}`)
+	f(`SCALAR(x) * foo / bar{baz="a"}`, `(SCALAR(x) * foo{baz="a"}) / bar{baz="a"}`)
+	f(`100 * on(foo) bar{baz="z"} + a`, `(100 * on (foo) bar{baz="z"}) + a`)
 }
