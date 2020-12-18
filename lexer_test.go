@@ -405,6 +405,10 @@ func TestDurationSuccess(t *testing.T) {
 	f("1i", 42*1000, 42*1000)
 	f("3i", 42, 3*42)
 	f("-3i", 42, -3*42)
+	f("1m34s24ms", 42, 94024)
+	f("1m-34s24ms", 42, 25976)
+	f("-1m34s24ms", 42, -94024)
+	f("-1m-34s24ms", 42, -94024)
 
 	// Float durations
 	f("34.54ms", 42, 34)
@@ -419,6 +423,8 @@ func TestDurationSuccess(t *testing.T) {
 	f("1.3y", 42, 1.3*365*24*60*60*1000)
 	f("-1.3y", 42, -1.3*365*24*60*60*1000)
 	f("0.1i", 12340, 0.1*12340)
+	f("1.5m3.4s2.4ms", 42, 93402)
+	f("-1.5m3.4s2.4ms", 42, -93402)
 }
 
 func TestDurationError(t *testing.T) {
