@@ -49,6 +49,7 @@ func TestUnescapeIdent(t *testing.T) {
 	f(`foo\ bar`, `foo bar`)
 	f(`\x21`, `!`)
 	f(`\xeDfoo\x2Fbar\-\xqw\x`, "\xedfoo\x2fbar-xqwx")
+	f(`\п\р\и\в\е\т123`, "привет123")
 }
 
 func TestAppendEscapedIdent(t *testing.T) {
@@ -64,6 +65,7 @@ func TestAppendEscapedIdent(t *testing.T) {
 	f(`a b-cd+dd\`, `a\ b\-cd\+dd\\`)
 	f("a\x1E\x20\xee", `a\x1e\ \xee`)
 	f("\x2e\x2e", `\x2e.`)
+	f("привет123", `\п\р\и\в\е\т123`)
 }
 
 func TestScanIdent(t *testing.T) {
@@ -80,6 +82,7 @@ func TestScanIdent(t *testing.T) {
 	f("foo()", "foo")
 	f(`a\-b+c`, `a\-b`)
 	f(`a\ b\\\ c\`, `a\ b\\\ c\`)
+	f(`\п\р\и\в\е\т123`, `\п\р\и\в\е\т123`)
 }
 
 func TestLexerNextPrev(t *testing.T) {
