@@ -362,9 +362,6 @@ func TestPositiveDurationSuccess(t *testing.T) {
 func TestPositiveDurationError(t *testing.T) {
 	f := func(s string) {
 		t.Helper()
-		if isPositiveDuration(s) {
-			t.Fatalf("unexpected valid duration %q", s)
-		}
 		d, err := PositiveDurationValue(s, 42)
 		if err == nil {
 			t.Fatalf("expecting non-nil error for duration %q", s)
@@ -381,6 +378,9 @@ func TestPositiveDurationError(t *testing.T) {
 	f("1.23mm")
 	f("123q")
 	f("-123s")
+
+	// Too big duration
+	f("10000000000y")
 }
 
 func TestDurationSuccess(t *testing.T) {
