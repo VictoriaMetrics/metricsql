@@ -1280,18 +1280,14 @@ func (p *parser) parseOffset() (string, error) {
 }
 
 func (p *parser) parseDuration() (string, error) {
-	isNegative := false
-	if p.lex.Token == "-" {
-		isNegative = true
+	isNegative := p.lex.Token == "-"
+	if isNegative {
 		if err := p.lex.Next(); err != nil {
 			return "", err
 		}
 	}
-	if !isPositiveDuration(p.lex.Token) {
-		return "", fmt.Errorf(`duration: unexpected token %q; want "duration"`, p.lex.Token)
-	}
-	d := p.lex.Token
-	if err := p.lex.Next(); err != nil {
+	d, err := p.parsePositiveDuration()
+	if err != nil {
 		return "", err
 	}
 	if isNegative {
@@ -1301,12 +1297,19 @@ func (p *parser) parseDuration() (string, error) {
 }
 
 func (p *parser) parsePositiveDuration() (string, error) {
-	d, err := p.parseDuration()
-	if err != nil {
-		return "", err
-	}
-	if strings.HasPrefix(d, "-") {
-		return "", fmt.Errorf("positiveDuration: expecting positive duration; got %q", d)
+	d := p.lex.Token
+	if isPositiveDuration(d) {
+		if err := p.lex.Next(); err != nil {
+			return "", err
+		}
+	} else {
+		if !isPositiveNumberPrefix(d) {
+			return "", fmt.Errorf(`duration: unexpected token %q; want "duration"`, d)
+		}
+		// Verify the duration in seconds without explicit suffix.
+		if _, err := p.parsePositiveNumberExpr(); err != nil {
+			return "", fmt.Errorf(`duration: parse error: %s`, err)
+		}
 	}
 	return d, nil
 }

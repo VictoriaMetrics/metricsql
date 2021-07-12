@@ -65,6 +65,11 @@ func TestParseSuccess(t *testing.T) {
 	same(`metric{foo!="bar"}[2d]`)
 	same(`metric{foo="bar"}[2d] offset 10h`)
 	same(`metric{foo="bar", b="sdfsdf"}[2d:3h] offset 10h`)
+	same(`metric{foo="bar", b="sdfsdf"}[2d:3h] offset 10`)
+	same(`metric{foo="bar", b="sdfsdf"}[2d:3] offset 10h`)
+	same(`metric{foo="bar", b="sdfsdf"}[2:3h] offset 10h`)
+	same(`metric{foo="bar", b="sdfsdf"}[2.34:5.6] offset 3600.5`)
+	same(`metric{foo="bar", b="sdfsdf"}[234:56] offset -3600`)
 	another(`  metric  {  foo  = "bar"  }  [  2d ]   offset   10h  `, `metric{foo="bar"}[2d] offset 10h`)
 	// metric name matching keywords
 	same("rate")
@@ -445,8 +450,7 @@ func TestParseError(t *testing.T) {
 	f("  \t\b\r\n  ")
 
 	// invalid metricExpr
-	f(`{__name__="ff"} offset 55`)
-	f(`foo[55]`)
+	f(`foo[-55]`)
 	f(`m[-5m]`)
 	f(`{`)
 	f(`foo{`)
@@ -483,9 +487,9 @@ func TestParseError(t *testing.T) {
 	f(`m[-5m:-1s]`)
 	f(`m[:`)
 	f(`m[:-`)
-	f(`m[:1]`)
+	f(`m[:-1]`)
 	f(`m[:-1m]`)
-	f(`m[5]`)
+	f(`m[-5]`)
 	f(`m[[5m]]`)
 	f(`m[foo]`)
 	f(`m["ff"]`)
