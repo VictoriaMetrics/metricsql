@@ -21,7 +21,7 @@ func ExampleParse() {
 	fmt.Printf("func: name=%s, arg=%s\n", fe.Name, fe.Args[0].AppendString(nil))
 
 	re := fe.Args[0].(*metricsql.RollupExpr)
-	fmt.Printf("rollup: expr=%s, window=%s\n", re.Expr.AppendString(nil), re.Window)
+	fmt.Printf("rollup: expr=%s, window=%s\n", re.Expr.AppendString(nil), re.Window.AppendString(nil))
 
 	me := re.Expr.(*metricsql.MetricExpr)
 	fmt.Printf("metric: labelFilter1=%s, labelFilter2=%s", me.LabelFilters[0].AppendString(nil), me.LabelFilters[1].AppendString(nil))

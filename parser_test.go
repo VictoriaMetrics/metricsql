@@ -155,6 +155,14 @@ func TestParseSuccess(t *testing.T) {
 	another(`073`, `59`)
 	another(`-0o12`, `-10`)
 
+	// durationExpr
+	same(`1h`)
+	another(`-1h`, `0 - 1h`)
+	same(`0.34h4m5s`)
+	another(`-0.34h4m5s`, `0 - 0.34h4m5s`)
+	same(`sum_over_tme(m[1h]) / 1h`)
+	same(`sum_over_time(m[3600]) / 3600`)
+
 	// binaryOpExpr
 	another(`nan == nan`, `NaN`)
 	another(`nan ==bool nan`, `1`)
