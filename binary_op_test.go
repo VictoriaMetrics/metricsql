@@ -26,6 +26,7 @@ func TestIsBinaryOpSuccess(t *testing.T) {
 	f("*")
 	f("/")
 	f("%")
+	f("atan2")
 	f("^")
 	f(">")
 	f("<")
