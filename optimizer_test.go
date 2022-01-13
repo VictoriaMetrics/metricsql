@@ -51,10 +51,17 @@ func TestOptimize(t *testing.T) {
 	f(`ABSENT(foo{bar="baz"}) + sqrt(a{z=~"c"})`, `ABSENT(foo{bar="baz"}) + sqrt(a{z=~"c"})`)
 
 	// rollup funcs
-	f(`RATE(foo[5m]) / rate(baz{a="b"}) + increase(x{y="z"} offset 5i)`, `(RATE(foo[5m]) / rate(baz{a="b"})) + increase(x{y="z"} offset 5i)`)
+	f(`RATE(foo[5m]) / rate(baz{a="b"}) + increase(x{y="z"} offset 5i)`, `(RATE(foo{a="b"}[5m]) / rate(baz{a="b"})) + increase(x{y="z"} offset 5i)`)
+	f(`sum(rate(foo[5m])) / rate(baz{a="b"})`, `sum(rate(foo[5m])) / rate(baz{a="b"})`)
+	f(`rate({__name__="foo"}) + rate({__name__="bar",x="y"}) - rate({__name__=~"baz"})`, `(rate(foo{x="y"}) + rate(bar{x="y"})) - rate({__name__=~"baz"})`)
+
+	// @ modifier
+	f(`foo @ end() + bar{baz="a"}`, `foo{baz="a"} @ end() + bar{baz="a"}`)
+	f(`sum(foo @ end()) + bar{baz="a"}`, `sum(foo @ end()) + bar{baz="a"}`)
 
 	// subqueries
-	f(`rate(avg_over_time(foo[5m:])) + bar{baz="a"}`, `rate(avg_over_time(foo[5m:])) + bar{baz="a"}`)
+	f(`rate(avg_over_time(foo[5m:])) + bar{baz="a"}`, `rate(avg_over_time(foo{baz="a"}[5m:])) + bar{baz="a"}`)
+	f(`rate(sum(foo[5m:])) + bar{baz="a"}`, `rate(sum(foo[5m:])) + bar{baz="a"}`)
 
 	// binary ops with constants or scalars
 	f(`100 * foo / bar{baz="a"}`, `(100 * foo{baz="a"}) / bar{baz="a"}`)

@@ -71,6 +71,20 @@ func TestParseSuccess(t *testing.T) {
 	same(`metric{foo="bar", b="sdfsdf"}[2.34:5.6] offset 3600.5`)
 	same(`metric{foo="bar", b="sdfsdf"}[234:56] offset -3600`)
 	another(`  metric  {  foo  = "bar"  }  [  2d ]   offset   10h  `, `metric{foo="bar"}[2d] offset 10h`)
+	// @ modifier
+	// See https://prometheus.io/docs/prometheus/latest/querying/basics/#modifier
+	same(`foo @ 123.45`)
+	same(`foo\@ @ 123.45`)
+	same(`{foo=~"bar"} @ end()`)
+	same(`foo{bar="baz"} @ start()`)
+	same(`foo{bar="baz"}[5m] @ 12345`)
+	same(`foo{bar="baz"}[5m:4s] offset 5m @ (end() - 3.5m)`)
+	another(`foo{bar="baz"}[5m:4s] @ (end() - 3.5m) offset 2.4h`, `foo{bar="baz"}[5m:4s] offset 2.4h @ (end() - 3.5m)`)
+	another(`foo @ start() + (bar offset 3m @ end()) / baz OFFSET -5m`, `foo @ start() + (bar offset 3m @ end() / baz offset -5m)`)
+	same(`sum(foo) @ start() + rate(bar @ (end() - 5m))`)
+	another(`time() @ (start())`, `time() @ start()`)
+	another(`time() @ (start()+(2))`, `time() @ (start() + 2)`)
+	same(`time() @ (end() - 10m)`)
 	// metric name matching keywords
 	same("rate")
 	same("RATE")
@@ -512,6 +526,17 @@ func TestParseError(t *testing.T) {
 	f(`m{x=y}`)
 	f(`m{x=y/5}`)
 	f(`m{x=y+5}`)
+
+	// Invalid @ modifier
+	f(`@`)
+	f(`foo @`)
+	f(`foo @ ! `)
+	f(`foo @ @`)
+	f(`foo @ offset 5m`)
+	f(`foo @ [5m]`)
+	f(`foo offset @ 5m`)
+	f(`foo @ 123 offset 5m @ 456`)
+	f(`foo offset 5m @`)
 
 	// Invalid regexp
 	f(`foo{bar=~"x["}`)
