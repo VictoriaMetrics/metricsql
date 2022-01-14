@@ -21,7 +21,6 @@ func TestParseSuccess(t *testing.T) {
 		t.Helper()
 		another(s, s)
 	}
-
 	// metricExpr
 	same(`{}`)
 	same(`{}[5m]`)
@@ -83,7 +82,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`foo @ start() + (bar offset 3m @ end()) / baz OFFSET -5m`, `foo @ start() + (bar offset 3m @ end() / baz offset -5m)`)
 	same(`sum(foo) @ start() + rate(bar @ (end() - 5m))`)
 	another(`time() @ (start())`, `time() @ start()`)
-	another(`time() @ (start()+(2))`, `time() @ (start() + 2)`)
+	another(`time() @ (start()+(1+1))`, `time() @ (start() + 2)`)
 	same(`time() @ (end() - 10m)`)
 	// metric name matching keywords
 	same("rate")
@@ -98,6 +97,8 @@ func TestParseSuccess(t *testing.T) {
 	same("with")
 	same("WITH")
 	same("With")
+	same("offset")
+	same("keep_metric_names")
 	same("alias")
 	same(`alias{foo="bar"}`)
 	same(`aLIas{alias="aa"}`)
@@ -283,6 +284,9 @@ func TestParseSuccess(t *testing.T) {
 	same(`f(job, foo)`)
 	same(`F(Job, Foo)`)
 	another(` FOO (bar) + f  (  m  (  ),ff(1 + (  2.5)) ,M[5m ]  , "ff"  )`, `FOO(bar) + f(m(), ff(3.5), M[5m], "ff")`)
+	same(`rate(foo[5m]) keep_metric_names`)
+	another(`log2(foo) KEEP_metric_names + 1 / increase(bar[5m]) keep_metric_names offset 1h @ 435`,
+		`log2(foo) keep_metric_names + (1 / increase(bar[5m]) keep_metric_names offset 1h @ 435)`)
 	// funcName matching keywords
 	same(`by(2)`)
 	same(`BY(2)`)
@@ -526,6 +530,7 @@ func TestParseError(t *testing.T) {
 	f(`m{x=y}`)
 	f(`m{x=y/5}`)
 	f(`m{x=y+5}`)
+	f(`m keep_metric_names`) // keep_metric_names cannot be used with metric expression
 
 	// Invalid @ modifier
 	f(`@`)
@@ -559,6 +564,8 @@ func TestParseError(t *testing.T) {
 	f(`"" $`)
 	f(`"foo" +`)
 	f(`n{"foo" + m`)
+	f(`"foo" keep_metric_names`)
+	f(`keep_metric_names "foo"`)
 
 	// invalid numberExpr
 	f(`12.`)
@@ -575,6 +582,8 @@ func TestParseError(t *testing.T) {
 	f(`-$$`)
 	f(`+$$`)
 	f(`23 $$`)
+	f(`1 keep_metric_names`)
+	f(`keep_metric_names 1`)
 
 	// invalid binaryOpExpr
 	f(`+`)
@@ -620,6 +629,7 @@ func TestParseError(t *testing.T) {
 	f(`1)`)
 	f(`(,)`)
 	f(`(1)$`)
+	f(`(foo) keep_metric_names`)
 
 	// invalid funcExpr
 	f(`f $`)
@@ -639,6 +649,8 @@ func TestParseError(t *testing.T) {
 	f(`f() foo (a)`)
 	f(`f bar (x) (b)`)
 	f(`f bar (x)`)
+	f(`keep_metric_names f()`)
+	f(`f() abc`)
 
 	// invalid aggrFuncExpr
 	f(`sum(`)
@@ -686,6 +698,7 @@ func TestParseError(t *testing.T) {
 	f(`avg by (a) (,b)`)
 	f(`sum by (x) (y) by (z)`)
 	f(`sum(m) by (1)`)
+	f(`sum(m) keep_metric_names`) // keep_metric_names cannot be used for aggregate functions
 
 	// invalid withExpr
 	f(`with $`)
@@ -742,4 +755,5 @@ func TestParseError(t *testing.T) {
 	f(`with (f(x) = sum(m) by (x)) f((xx(), {foo="bar"}))`)
 	f(`with (f(x) = m + on (x) n) f(xx())`)
 	f(`with (f(x) = m + on (a) group_right (x) n) f(xx())`)
+	f(`with (f(x) = m keep_metric_names)`)
 }
