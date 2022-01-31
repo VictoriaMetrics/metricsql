@@ -4,6 +4,40 @@ import (
 	"testing"
 )
 
+func TestPushdownBinaryOpFilters(t *testing.T) {
+	f := func(q, filters, qResultExpected string) {
+		t.Helper()
+		e, err := Parse(q)
+		if err != nil {
+			t.Fatalf("unexpected error in Parse(%q): %s", q, err)
+		}
+		sOrig := string(e.AppendString(nil))
+		filtersExpr, err := Parse(filters)
+		if err != nil {
+			t.Fatalf("cannot parse filters %s: %s", filters, err)
+		}
+		me, ok := filtersExpr.(*MetricExpr)
+		if !ok {
+			t.Fatalf("filters=%s must be a metrics expression; got %T", filters, filtersExpr)
+		}
+		resultExpr := PushdownBinaryOpFilters(e, me.LabelFilters)
+		result := resultExpr.AppendString(nil)
+		if string(result) != qResultExpected {
+			t.Fatalf("unexpected result;\ngot\n%s\nwant\n%s", result, qResultExpected)
+		}
+		// Verify that the original e didn't change after PushdownBinaryOpFilters() call
+		s := string(e.AppendString(nil))
+		if s != sOrig {
+			t.Fatalf("the original expression has been changed;\ngot\n%s\nwant\n%s", s, sOrig)
+		}
+	}
+	f(`foo`, `{a="b"}`, `foo{a="b"}`)
+	f(`foo + bar{x="y"}`, `{c="d",a="b"}`, `foo{a="b", c="d"} + bar{a="b", c="d", x="y"}`)
+	f(`sum(x)`, `{a="b"}`, `sum(x)`)
+	f(`a / sum(x)`, `{a="b",c=~"foo|bar"}`, `a{a="b", c=~"foo|bar"} / sum(x)`)
+	f(`round(rate(x[5m] offset -1h)) + 123 / {a="b"}`, `{x!="y"}`, `round(rate(x{x!="y"}[5m] offset -1h)) + (123 / {a="b", x!="y"})`)
+}
+
 func TestOptimize(t *testing.T) {
 	f := func(q, qOptimizedExpected string) {
 		t.Helper()
@@ -11,10 +45,16 @@ func TestOptimize(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error in Parse(%q): %s", q, err)
 		}
-		e = Optimize(e)
-		qOptimized := e.AppendString(nil)
+		sOrig := string(e.AppendString(nil))
+		eOptimized := Optimize(e)
+		qOptimized := eOptimized.AppendString(nil)
 		if string(qOptimized) != qOptimizedExpected {
 			t.Fatalf("unexpected qOptimized;\ngot\n%s\nwant\n%s", qOptimized, qOptimizedExpected)
+		}
+		// Make sure the the orginal e didn't change after Optimize() call
+		s := string(e.AppendString(nil))
+		if s != sOrig {
+			t.Fatalf("the original expression has been changed;\ngot\n%s\nwant\n%s", s, sOrig)
 		}
 	}
 	f("foo", "foo")
