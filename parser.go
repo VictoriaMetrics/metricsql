@@ -306,13 +306,13 @@ func (p *parser) parseWithArgExpr() (*withArgExpr, error) {
 		return nil, fmt.Errorf(`withArgExpr: unexpected token %q; want "ident"`, p.lex.Token)
 	}
 	wa.Name = unescapeIdent(p.lex.Token)
-	if isAggrFunc(wa.Name) || IsRollupFunc(wa.Name) || IsTransformFunc(wa.Name) || isWith(wa.Name) {
-		return nil, fmt.Errorf(`withArgExpr: cannot use reserved name %q`, wa.Name)
-	}
 	if err := p.lex.Next(); err != nil {
 		return nil, err
 	}
 	if p.lex.Token == "(" {
+		if isAggrFunc(wa.Name) || IsRollupFunc(wa.Name) || IsTransformFunc(wa.Name) || isWith(wa.Name) {
+			return nil, fmt.Errorf(`withArgExpr: cannot use reserved name %q`, wa.Name)
+		}
 		// Parse func args.
 		args, err := p.parseIdentList()
 		if err != nil {
