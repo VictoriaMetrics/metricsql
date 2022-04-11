@@ -310,9 +310,6 @@ func (p *parser) parseWithArgExpr() (*withArgExpr, error) {
 		return nil, err
 	}
 	if p.lex.Token == "(" {
-		if isAggrFunc(wa.Name) || IsRollupFunc(wa.Name) || IsTransformFunc(wa.Name) || isWith(wa.Name) {
-			return nil, fmt.Errorf(`withArgExpr: cannot use reserved name %q`, wa.Name)
-		}
 		// Parse func args.
 		args, err := p.parseIdentList()
 		if err != nil {
@@ -682,16 +679,20 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 			return nil, err
 		}
 		wa := getWithArgExpr(was, t.Name)
-		if wa == nil {
-			fe := *t
-			fe.Args = args
-			return &fe, nil
+		if wa != nil {
+			return expandWithExprExt(was, wa, args)
 		}
-		return expandWithExprExt(was, wa, args)
+		fe := *t
+		fe.Args = args
+		return &fe, nil
 	case *AggrFuncExpr:
 		args, err := expandWithArgs(was, t.Args)
 		if err != nil {
 			return nil, err
+		}
+		wa := getWithArgExpr(was, t.Name)
+		if wa != nil {
+			return expandWithExprExt(was, wa, args)
 		}
 		modifierArgs, err := expandModifierArgs(was, t.Modifier.Args)
 		if err != nil {

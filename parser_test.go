@@ -459,10 +459,16 @@ func TestParseSuccess(t *testing.T) {
 
 	another(`with(sum=123,now=5) union(with(sum=3,f(x)=x*sum) f(2) + f(3), with(x=5,sum=2) x*sum*now)`, `union(15, 50)`)
 	another(`WITH(now = sum(rate(my_metric_total)), before = sum(rate(my_metric_total) offset 1h)) now/before*100`, `(sum(rate(my_metric_total)) / sum(rate(my_metric_total) offset 1h)) * 100`)
-	another(`with (sum = x) y`, `y`)
-	another(`with (clamp_min=x) y`, `y`)
-
+	another(`with (sum = x) sum`, `x`)
+	another(`with (clamp_min=x) clamp_min`, `x`)
+	another(`with (now=now(), sum=sum()) now`, `now()`)
+	another(`with (now=now(), sum=sum()) now()`, `now()`)
+	another(`with (now(a)=now()+a) now(1)`, `now() + 1`)
+	another(`with (rate(a,b)=a+b) rate(1,2)`, `3`)
 	another(`with (now=now(), sum=sum()) x`, `x`)
+	another(`with (rate(a) = b) c`, `c`)
+	another(`rate(x) + with (rate(a,b)=a*b) rate(2,b)`, `rate(x) + (2 * b)`)
+	another(`with (sum(a,b)=a+b) sum(c,d)`, `c + d`)
 }
 
 func TestParseError(t *testing.T) {
@@ -725,6 +731,7 @@ func TestParseError(t *testing.T) {
 	f(`with (x=(`)
 	f(`with (x=[)`)
 	f(`with (x=() x)`)
+	f(`with(x)`)
 	f(`with ($$)`)
 	f(`with (x $$`)
 	f(`with (x = $$)`)
@@ -734,7 +741,6 @@ func TestParseError(t *testing.T) {
 	f(`with (x = a, x = b) c`)
 	f(`with (x(a, a) = b) c`)
 	f(`with (x=m{f="x"}) foo{x}`)
-	f(`with (rate(a) = b) c`)
 	f(`with (f()`)
 	f(`with (a=b c=d) e`)
 	f(`with (f(x)=x^2) m{x}`)
@@ -761,6 +767,10 @@ func TestParseError(t *testing.T) {
 	f(`with (f(x) = m + on (x) n) f(xx())`)
 	f(`with (f(x) = m + on (a) group_right (x) n) f(xx())`)
 	f(`with (f(x) = m keep_metric_names)`)
-	f(`with(now)`)
-	f(`with(now=now())`)
+	f(`with (now)`)
+	f(`with (sum)`)
+	f(`with (now=now()) now(1)`)
+	f(`with (f())`)
+	f(`with (sum(a,b)=a+b) sum(x)`)
+	f(`with (rate()=foobar) rate(x)`)
 }
