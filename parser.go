@@ -307,7 +307,9 @@ func (p *parser) parseWithArgExpr() (*withArgExpr, error) {
 	}
 	wa.Name = unescapeIdent(p.lex.Token)
 	if isAggrFunc(wa.Name) || IsRollupFunc(wa.Name) || IsTransformFunc(wa.Name) || isWith(wa.Name) {
-		return nil, fmt.Errorf(`withArgExpr: cannot use reserved name %q`, wa.Name)
+		if !p.isVariable() {
+			return nil, fmt.Errorf(`withArgExpr: cannot use reserved name %q`, wa.Name)
+		}
 	}
 	if err := p.lex.Next(); err != nil {
 		return nil, err
@@ -1477,6 +1479,18 @@ func (p *parser) parseRollupExpr(arg Expr) (Expr, error) {
 		re.At = at
 	}
 	return &re, nil
+}
+
+func (p parser) isVariable() bool {
+	p.lex.Init(p.lex.sTail)
+	err := p.lex.Next()
+	if err != nil {
+		return false
+	}
+	if p.lex.Token != "(" {
+		return true
+	}
+	return false
 }
 
 // StringExpr represents string expression.

@@ -456,6 +456,13 @@ func TestParseSuccess(t *testing.T) {
 	   hitRate(cacheHits, cacheMisses)`,
 		`sum(rate(cacheHits{job="foo", instance="bar"})) by (job, instance) / (sum(rate(cacheHits{job="foo", instance="bar"})) by (job, instance) + sum(rate(cacheMisses{job="foo", instance="bar"})) by (job, instance))`)
 	another(`with(y=123,z=5) union(with(y=3,f(x)=x*y) f(2) + f(3), with(x=5,y=2) x*y*z)`, `union(15, 50)`)
+
+	another(`with(sum=123,now=5) union(with(sum=3,f(x)=x*sum) f(2) + f(3), with(x=5,sum=2) x*sum*now)`, `union(15, 50)`)
+	another(`WITH(now = sum(rate(my_metric_total)), before = sum(rate(my_metric_total) offset 1h)) now/before*100`, `(sum(rate(my_metric_total)) / sum(rate(my_metric_total) offset 1h)) * 100`)
+	another(`with (sum = x) y`, `y`)
+	another(`with (clamp_min=x) y`, `y`)
+
+	another(`with (now=now(), sum=sum()) x`, `x`)
 }
 
 func TestParseError(t *testing.T) {
@@ -727,9 +734,7 @@ func TestParseError(t *testing.T) {
 	f(`with (x = a, x = b) c`)
 	f(`with (x(a, a) = b) c`)
 	f(`with (x=m{f="x"}) foo{x}`)
-	f(`with (sum = x) y`)
 	f(`with (rate(a) = b) c`)
-	f(`with (clamp_min=x) y`)
 	f(`with (f()`)
 	f(`with (a=b c=d) e`)
 	f(`with (f(x)=x^2) m{x}`)
@@ -756,4 +761,6 @@ func TestParseError(t *testing.T) {
 	f(`with (f(x) = m + on (x) n) f(xx())`)
 	f(`with (f(x) = m + on (a) group_right (x) n) f(xx())`)
 	f(`with (f(x) = m keep_metric_names)`)
+	f(`with(now)`)
+	f(`with(now=now())`)
 }
