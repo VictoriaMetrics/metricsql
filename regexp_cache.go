@@ -99,11 +99,11 @@ func (rc *regexpCache) Misses() uint64 {
 	return atomic.LoadUint64(&rc.misses)
 }
 
-func (rc *regexpCache) Len() uint64 {
+func (rc *regexpCache) Len() int {
 	rc.mu.RLock()
 	n := len(rc.m)
 	rc.mu.RUnlock()
-	return uint64(n)
+	return n
 }
 
 func (rc *regexpCache) CharsCurrent() int {

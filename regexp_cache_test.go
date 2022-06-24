@@ -1,14 +1,66 @@
 package metricsql
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
+	"time"
 )
 
+func TestRegexpCacheConcurrent(t *testing.T) {
+	goroutines := 5
+	maxChars := 1000
+	rc := newRegexpCache(maxChars)
+	resultCh := make(chan error, goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			resultCh <- testRegexpCache(rc)
+		}()
+	}
+	timer := time.NewTimer(time.Second * 5)
+	for i := 0; i < goroutines; i++ {
+		select {
+		case <-timer.C:
+			t.Fatalf("timeout")
+		case err := <-resultCh:
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+		}
+	}
+	maxChars += int(float64(maxChars) * 0.1)
+	if chars := rc.CharsCurrent(); chars > maxChars {
+		t.Fatalf("too many chars in the regexpCache; got %d; expected no more than %d", chars, maxChars)
+	}
+}
+
+func testRegexpCache(rc *regexpCache) error {
+	for i := 0; i < 10000; i++ {
+		key := fmt.Sprintf("foo|regexp-%d", i)
+		rcv := rc.Get(key)
+		if rcv != nil {
+			if rcv.err != nil {
+				return fmt.Errorf("unexpected error obtained for key %q: %w", key, rcv.err)
+			}
+			if re := rcv.r.String(); re != key {
+				return fmt.Errorf("unexpected regexp obtained for key %q: %q; want %q", key, re, key)
+			}
+		} else {
+			r, err := regexp.Compile(key)
+			rcv := &regexpCacheValue{
+				r:   r,
+				err: err,
+			}
+			rc.Put(key, rcv)
+		}
+	}
+	return nil
+}
+
 func TestRegexpCache(t *testing.T) {
-	fn := func(limit int, regexps []string, expectedEntries, expectedChars int) {
+	fn := func(maxChars int, regexps []string, expectedEntries, expectedChars int) {
 		t.Helper()
-		rc := newRegexpCache(limit)
+		rc := newRegexpCache(maxChars)
 		for _, re := range regexps {
 			r, err := regexp.Compile(re)
 			rcv := &regexpCacheValue{
@@ -34,7 +86,7 @@ func TestRegexpCache(t *testing.T) {
 		if misses := rc.Misses(); misses != 1 {
 			t.Fatalf("unexpected number of misses; got %d; want 1", misses)
 		}
-		if entries := rc.Len(); entries != uint64(expectedEntries) {
+		if entries := rc.Len(); entries != expectedEntries {
 			t.Fatalf("unexpected number of entries; got %d; want %d", entries, expectedEntries)
 		}
 		if chars := rc.CharsCurrent(); chars != expectedChars {
