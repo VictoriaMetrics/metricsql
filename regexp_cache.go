@@ -29,9 +29,12 @@ func CompileRegexp(re string) (*regexp.Regexp, error) {
 	return rcv.r, rcv.err
 }
 
+const regexpCacheCharsMax = 1e6
+
 var regexpCacheV = func() *regexpCache {
 	rc := &regexpCache{
-		m: make(map[string]*regexpCacheValue),
+		m:          make(map[string]*regexpCacheValue),
+		charsLimit: regexpCacheCharsMax,
 	}
 	metrics.NewGauge(`vm_cache_requests_total{type="promql/regexp"}`, func() float64 {
 		return float64(rc.Requests())
@@ -42,10 +45,11 @@ var regexpCacheV = func() *regexpCache {
 	metrics.NewGauge(`vm_cache_entries{type="promql/regexp"}`, func() float64 {
 		return float64(rc.Len())
 	})
+	metrics.NewGauge(`vm_cache_chars{type="promql/regexp"}`, func() float64 {
+		return float64(rc.chars)
+	})
 	return rc
 }()
-
-const regexpCacheMaxLen = 10e3
 
 type regexpCacheValue struct {
 	r   *regexp.Regexp
@@ -58,6 +62,14 @@ type regexpCache struct {
 
 	requests uint64
 	misses   uint64
+
+	// chars stores the total number of characters used in stored regexps.
+	// is used for memory usage estimation
+	chars int
+	// charsLimit limits the max number of chars stored in cache across all entries.
+	// we limit by number of chars since calculating the exact size of each regexp is problematic,
+	// while using chars seems like universal approach for simple and complex expressions.
+	charsLimit int
 
 	m  map[string]*regexpCacheValue
 	mu sync.RWMutex
@@ -93,18 +105,22 @@ func (rc *regexpCache) Get(regexp string) *regexpCacheValue {
 
 func (rc *regexpCache) Put(regexp string, rcv *regexpCacheValue) {
 	rc.mu.Lock()
-	overflow := len(rc.m) - regexpCacheMaxLen
-	if overflow > 0 {
-		// Remove 10% of items from the cache.
-		overflow = int(float64(len(rc.m)) * 0.1)
+	if rc.chars-rc.charsLimit > 0 {
+		// Remove items accounting for 10% chars from the cache.
+		overflow := int(float64(rc.charsLimit) * 0.1)
 		for k := range rc.m {
 			delete(rc.m, k)
-			overflow--
+
+			size := len(regexp)
+			overflow -= size
+			rc.chars -= size
+
 			if overflow <= 0 {
 				break
 			}
 		}
 	}
 	rc.m[regexp] = rcv
+	rc.chars += len(regexp)
 	rc.mu.Unlock()
 }
