@@ -94,13 +94,13 @@ func TestRegexpCache(t *testing.T) {
 		}
 	}
 
-	fn(10, []string{"a", "b", "c"}, 3, 6)
-	fn(2, []string{"a", "b", "c"}, 2, 4) // overflow by 1 entry is allowed
-	fn(2, []string{"a", "b", "c", "d"}, 2, 4)
-	fn(1, []string{"a", "b", "c"}, 1, 2)
-	fn(2, []string{"abcd", "efgh", "ijkl"}, 1, 8)   // overflow by 1 entry is allowed
-	fn(5, []string{"123", "fd{456", "789"}, 1, 6)   // overflow by 1 entry is allowed
-	fn(18, []string{"123", "fd{456", "789"}, 3, 24) // overflow by 1 entry is allowed
-	fn(24, []string{"123", "fd{456", "789"}, 3, 24)
-	fn(30, []string{"123", "fd{456", "789"}, 3, 24)
+	fn(10, []string{"a", "b", "c"}, 3, 3)
+	fn(2, []string{"a", "b", "c"}, 3, 3) // overflow by 1 entry is allowed
+	fn(2, []string{"a", "b", "c", "d"}, 3, 3)
+	fn(1, []string{"a", "b", "c"}, 2, 2)  // overflow by 1 tnery is allowed
+	fn(2, []string{"abcd", "efgh", "ijkl"}, 1, 4)   // overflow by 1 entry is allowed
+	fn(2, []string{"123", "fd{456", "789"}, 1, 3)   // overflow by 1 entry is allowed
+	fn(9, []string{"123", "fd{456", "789"}, 3, 12) // overflow by 1 entry is allowed
+	fn(12, []string{"123", "fd{456", "789"}, 3, 12)
+	fn(15, []string{"123", "fd{456", "789"}, 3, 12)
 }
