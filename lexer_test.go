@@ -410,6 +410,15 @@ func TestLexerSuccess(t *testing.T) {
 		# yet another comment`
 	expectedTokens = []string{"foobar", "baz"}
 	testLexerSuccess(t, s, expectedTokens)
+
+	s = "тест"
+	expectedTokens = []string{s}
+	testLexerSuccess(t, s, expectedTokens)
+
+	s = `温度{房间="水电费"}[5m] offset 10m`
+	expectedTokens = []string{"温度", "{", "房间", "=", `"水电费"`, "}", "[", "5m", "]", "offset", "10m"}
+	testLexerSuccess(t, s, expectedTokens)
+
 }
 
 func testLexerSuccess(t *testing.T, s string, expectedTokens []string) {
@@ -441,9 +450,6 @@ func TestLexerError(t *testing.T) {
 	testLexerError(t, `"foobar`)
 	testLexerError(t, `'`)
 	testLexerError(t, "`")
-
-	// Unrecognized char
-	testLexerError(t, "тест")
 
 	// Invalid numbers
 	testLexerError(t, `.`)

@@ -335,6 +335,11 @@ func scanIdent(s string) string {
 			i++
 			continue
 		}
+		if isUnicodePrefix(s[i:]) {
+			_, size := utf8.DecodeRuneInString(s[i:])
+			i += size
+			continue
+		}
 		if s[i] != '\\' {
 			break
 		}
@@ -707,7 +712,10 @@ func isIdentPrefix(s string) bool {
 		// Assume this is an escape char for the next char.
 		return true
 	}
-	return isFirstIdentChar(s[0])
+	if isFirstIdentChar(s[0]) {
+		return true
+	}
+	return isUnicodePrefix(s)
 }
 
 func isFirstIdentChar(ch byte) bool {
@@ -731,4 +739,13 @@ func isSpaceChar(ch byte) bool {
 	default:
 		return false
 	}
+}
+
+func isUnicodePrefix(s string) bool {
+	rune, size := utf8.DecodeRuneInString(s)
+	if rune == utf8.RuneError {
+		return false
+	}
+
+	return size > 1
 }
