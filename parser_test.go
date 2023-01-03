@@ -777,15 +777,14 @@ func TestParseError(t *testing.T) {
 
 func TestDurationExprSuccess(t *testing.T) {
 
-	f := func(str string, step int64, wantErr bool, want int64) {
+	f := func(str string, step int64, want int64) {
 		t.Helper()
 		de := &DurationExpr{
 			s: str,
 		}
 		got, err := de.Duration(step)
-		if (err != nil) != wantErr {
-			t.Errorf("Duration() error = %v, wantErr %v", err, wantErr)
-			return
+		if err != nil {
+			t.Fatalf("expecting nil error when parsing %q", str)
 		}
 		if got != want {
 			t.Errorf("Duration() got = %v, want %v", got, want)
@@ -793,65 +792,64 @@ func TestDurationExprSuccess(t *testing.T) {
 	}
 
 	// Integer durations
-	f("123ms", 42, false, 123)
-	f("123s", 42, false, 123*1000)
-	f("123m", 42, false, 123*60*1000)
-	f("1h", 42, false, 1*60*60*1000)
-	f("2d", 42, false, 2*24*60*60*1000)
-	f("3w", 42, false, 3*7*24*60*60*1000)
-	f("4y", 42, false, 4*365*24*60*60*1000)
-	f("1i", 42*1000, false, 42*1000)
-	f("3i", 42, false, 3*42)
+	f("123ms", 42, 123)
+	f("123s", 42, 123*1000)
+	f("123m", 42, 123*60*1000)
+	f("1h", 42, 1*60*60*1000)
+	f("2d", 42, 2*24*60*60*1000)
+	f("3w", 42, 3*7*24*60*60*1000)
+	f("4y", 42, 4*365*24*60*60*1000)
+	f("1i", 42*1000, 42*1000)
+	f("3i", 42, 3*42)
 
 	// Float durations
-	f("123.45ms", 42, false, 123)
-	f("0.234s", 42, false, 234)
-	f("1.5s", 42, false, 1.5*1000)
-	f("1.5m", 42, false, 1.5*60*1000)
-	f("1.2h", 42, false, 1.2*60*60*1000)
-	f("1.1d", 42, false, 1.1*24*60*60*1000)
-	f("1.1w", 42, false, 1.1*7*24*60*60*1000)
-	f("1.3y", 42, false, 1.3*365*24*60*60*1000)
-	f("0.1i", 12340, false, 0.1*12340)
+	f("123.45ms", 42, 123)
+	f("0.234s", 42, 234)
+	f("1.5s", 42, 1.5*1000)
+	f("1.5m", 42, 1.5*60*1000)
+	f("1.2h", 42, 1.2*60*60*1000)
+	f("1.1d", 42, 1.1*24*60*60*1000)
+	f("1.1w", 42, 1.1*7*24*60*60*1000)
+	f("1.3y", 42, 1.3*365*24*60*60*1000)
+	f("0.1i", 12340, 0.1*12340)
 
 	// Floating-point durations without suffix.
-	f("123", 45, false, 123000)
-	f("1.23", 45, false, 1230)
-	f("0.56", 12, false, 560)
-	f(".523e2", 21, false, 52300)
-	f("-123s", 42, false, 123)
+	f("123", 45, 123000)
+	f("1.23", 45, 1230)
+	f("0.56", 12, 560)
+	f(".523e2", 21, 52300)
+	f("-123s", 42, -123000)
 }
 
 func TestDurationExprError(t *testing.T) {
 
-	f := func(str string, step int64, wantErr bool) {
+	f := func(str string, step int64) {
 		t.Helper()
 		de := &DurationExpr{
 			s: str,
 		}
 		_, err := de.Duration(step)
-		if (err != nil) != wantErr {
-			t.Errorf("Duration() error = %v, wantErr %v", err, wantErr)
-			return
+		if err == nil {
+			t.Fatalf("expecting non-nil error when parsing %q", str)
 		}
 	}
 
-	f(``, 200, true)
-	f("foo", 42, true)
-	f("m", 42, true)
-	f("1.23mm", 42, true)
-	f("123q", 42, true)
+	f(``, 200)
+	f("foo", 42)
+	f("m", 42)
+	f("1.23mm", 42)
+	f("123q", 42)
 
 	// Too big duration
-	f("10000000000y", 42, true)
+	f("10000000000y", 42)
 
 	// With uppercase duration
-	f("1M", 23, true)
-	f("1Ms", 23, true)
-	f("1MS", 23, true)
-	f("1Y", 23, true)
-	f("2W", 23, true)
-	f("3D", 23, true)
-	f("3H", 23, true)
-	f("3S", 23, true)
+	f("1M", 23)
+	f("1Ms", 23)
+	f("1MS", 23)
+	f("1Y", 23)
+	f("2W", 23)
+	f("3D", 23)
+	f("3H", 23)
+	f("3S", 23)
 }
