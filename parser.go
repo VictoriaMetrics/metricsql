@@ -1366,15 +1366,15 @@ func (de *DurationExpr) AppendString(dst []byte) []byte {
 }
 
 // Duration returns the duration from de in milliseconds.
-func (de *DurationExpr) Duration(step int64) int64 {
+func (de *DurationExpr) Duration(step int64) (int64, error) {
 	if de == nil {
-		return 0
+		return 0, nil
 	}
 	d, err := DurationValue(de.s, step)
 	if err != nil {
-		panic(fmt.Errorf("BUG: cannot parse duration %q: %s", de.s, err))
+		return 0, fmt.Errorf("cannot parse duration %q: %s", de.s, err)
 	}
-	return d
+	return d, nil
 }
 
 // parseIdentExpr parses expressions starting with `ident` token.
