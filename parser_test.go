@@ -309,6 +309,15 @@ func TestParseSuccess(t *testing.T) {
 	// funcName with escape chars
 	same(`foo\(ba\-r()`)
 
+	// duration converts to lower case
+	another(`{}[5m:3S]`, `{}[5m:3S]`)
+	another(`{}[5H:]`, `{}[5H:]`)
+	another(`{}[5M:3s]`, `{}[5M:3s]`)
+	another(`m[10M]`, `m[10M]`)
+	another(`m[10MS]`, `m[10MS]`)
+	another(`foo offset 5M`, `foo offset 5M`)
+	another(`foo offset 5S`, `foo offset 5S`)
+
 	// aggrFuncExpr
 	same(`sum(http_server_request) by ()`)
 	same(`sum(http_server_request) by (job)`)
@@ -553,13 +562,6 @@ func TestParseError(t *testing.T) {
 	f(`m{x=y+5}`)
 	f(`m keep_metric_names`) // keep_metric_names cannot be used with metric expression
 
-	// Invalid
-	f(`{}[5m:3S]`)
-	f(`{}[5H:]`)
-	f(`{}[5M:3s]`)
-	f(`m[10M]`)
-	f(`m[10MS]`)
-
 	// Invalid @ modifier
 	f(`@`)
 	f(`foo @`)
@@ -570,10 +572,6 @@ func TestParseError(t *testing.T) {
 	f(`foo offset @ 5m`)
 	f(`foo @ 123 offset 5m @ 456`)
 	f(`foo offset 5m @`)
-
-	// offset with uppercase
-	f(`foo offset 5M`)
-	f(`foo offset 5S`)
 
 	// Invalid regexp
 	f(`foo{bar=~"x["}`)

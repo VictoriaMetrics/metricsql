@@ -513,6 +513,14 @@ func TestPositiveDurationSuccess(t *testing.T) {
 	f("1.23", 45, 1230)
 	f("0.56", 12, 560)
 	f(".523e2", 21, 52300)
+
+	// different durations prefixes
+	f("1Ms", 45, 1)
+	f("1mS", 45, 1)
+	f("1M", 45, 1*60*1000)
+	f("1H", 45, 1*60*60*1000)
+	f("1D", 45, 1*24*60*60*1000)
+	f("1Y", 45, 1*365*24*60*60*1000)
 }
 
 func TestPositiveDurationError(t *testing.T) {
@@ -535,14 +543,6 @@ func TestPositiveDurationError(t *testing.T) {
 
 	// Too big duration
 	f("10000000000y")
-
-	// unsupported durations
-	f("1Ms")
-	f("1mS")
-	f("1M")
-	f("1H")
-	f("1D")
-	f("1Y")
 }
 
 func TestDurationSuccess(t *testing.T) {
@@ -596,6 +596,13 @@ func TestDurationSuccess(t *testing.T) {
 	f("1.23", 45, 1230)
 	f("-0.56", 12, -560)
 	f("-.523e2", 21, -52300)
+
+	f("1Ms", 10, 1)
+	f("1mS", 10, 1)
+	f("1M", 10, 60*1000)
+	f("1H", 10, 1*60*60*1000)
+	f("1D", 10, 1*24*60*60*1000)
+	f("1Y", 10, 1*365*24*60*60*1000)
 }
 
 func TestDurationError(t *testing.T) {
@@ -615,11 +622,4 @@ func TestDurationError(t *testing.T) {
 	f("1.23mm")
 	f("123q")
 	f("-123q")
-
-	f("1Ms")
-	f("1mS")
-	f("1M")
-	f("1H")
-	f("1D")
-	f("1Y")
 }
