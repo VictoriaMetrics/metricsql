@@ -385,6 +385,14 @@ func TestPositiveDurationError(t *testing.T) {
 
 	// Too big duration
 	f("10000000000y")
+
+	// unsupported durations
+	f("1Ms")
+	f("1mS")
+	f("1M")
+	f("1H")
+	f("1D")
+	f("1Y")
 }
 
 func TestDurationSuccess(t *testing.T) {
@@ -457,4 +465,11 @@ func TestDurationError(t *testing.T) {
 	f("1.23mm")
 	f("123q")
 	f("-123q")
+
+	f("1Ms")
+	f("1mS")
+	f("1M")
+	f("1H")
+	f("1D")
+	f("1Y")
 }

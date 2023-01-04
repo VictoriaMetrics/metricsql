@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"unicode"
 )
 
 // Parse parses MetricsQL query s.
@@ -1334,9 +1333,6 @@ func (p *parser) parseDuration() (*DurationExpr, error) {
 
 func (p *parser) parsePositiveDuration() (*DurationExpr, error) {
 	s := p.lex.Token
-	if isUpper(s) {
-		return nil, fmt.Errorf("duration: can't contain uppercase letters: %q", s)
-	}
 	if isPositiveDuration(s) {
 		if err := p.lex.Next(); err != nil {
 			return nil, err
@@ -1350,6 +1346,12 @@ func (p *parser) parsePositiveDuration() (*DurationExpr, error) {
 			return nil, fmt.Errorf(`duration: parse error: %s`, err)
 		}
 	}
+
+	_, err := PositiveDurationValue(s, 0)
+	if err != nil {
+		return nil, fmt.Errorf("duration: unexpected duration: %q", err)
+	}
+
 	de := &DurationExpr{
 		s: s,
 	}
@@ -1894,13 +1896,4 @@ func (me *MetricExpr) hasNonEmptyMetricGroup() bool {
 
 func (lf *LabelFilter) isMetricNameFilter() bool {
 	return lf.Label == "__name__" && !lf.IsNegative && !lf.IsRegexp
-}
-
-func isUpper(s string) bool {
-	for _, r := range s {
-		if !unicode.IsUpper(r) {
-			return false
-		}
-	}
-	return true
 }
