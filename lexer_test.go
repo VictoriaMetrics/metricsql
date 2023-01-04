@@ -1,9 +1,160 @@
 package metricsql
 
 import (
+	"math"
 	"reflect"
 	"testing"
 )
+
+func TestScanNumMultiplier(t *testing.T) {
+	f := func(s string, lenExpected int) {
+		t.Helper()
+		sLen := scanNumMultiplier(s)
+		if sLen != lenExpected {
+			t.Fatalf("unexpected len returned from scanNumMultiplier(%q); got %d; want %d", s, sLen, lenExpected)
+		}
+	}
+	f("", 0)
+	f("foo", 0)
+	f("k", 1)
+	f("KB", 2)
+	f("Ki", 2)
+	f("kiB", 3)
+	f("M", 1)
+	f("Mb", 2)
+	f("mi", 2)
+	f("MiB", 3)
+	f("g", 1)
+	f("GB", 2)
+	f("GI", 2)
+	f("GIB", 3)
+	f("t", 1)
+	f("tB", 2)
+	f("tI", 2)
+	f("tIb", 3)
+
+	f("Gb   ", 2)
+	f("tIb + 5", 3)
+}
+
+func TestScanPositiveNumberSuccess(t *testing.T) {
+	f := func(s, nsExpected string) {
+		t.Helper()
+		ns, err := scanPositiveNumber(s)
+		if err != nil {
+			t.Fatalf("unexpected error in scanPositiveNumber(%q): %s", s, err)
+		}
+		if ns != nsExpected {
+			t.Fatalf("unexpected number scanned from %q; got %q; want %q", s, ns, nsExpected)
+		}
+	}
+	f("123", "123")
+	f("123+5", "123")
+	f("1.23 ", "1.23")
+	f("12e5", "12e5")
+	f("1.3E-3/5", "1.3E-3")
+	f("234.", "234.")
+	f("234. + foo", "234.")
+	f("0xfe", "0xfe")
+	f("0b0110", "0b0110")
+	f("0O765", "0O765")
+	f("0765", "0765")
+	f("2k*34", "2k")
+	f("2.3Kb / 43", "2.3Kb")
+	f("3ki", "3ki")
+	f("4.5Kib", "4.5Kib")
+	f("2m", "2m")
+	f("2.3Mb", "2.3Mb")
+	f("3Mi", "3Mi")
+	f("4.5mib", "4.5mib")
+	f("2G", "2G")
+	f("2.3gB", "2.3gB")
+	f("3gI", "3gI")
+	f("4.5GiB / foo", "4.5GiB")
+	f("2T", "2T")
+	f("2.3tb", "2.3tb")
+	f("3tI", "3tI")
+	f("4.5TIB   ", "4.5TIB")
+}
+
+func TestScanPositiveNumberFailure(t *testing.T) {
+	f := func(s string) {
+		t.Helper()
+		ns, err := scanPositiveNumber(s)
+		if err == nil {
+			t.Fatalf("expecting non-nil error in scanPositiveNumber(%q); got result %q", s, ns)
+		}
+	}
+	f("")
+	f("foobar")
+	f("123e")
+	f("1233Ebc")
+	f("12.34E+abc")
+	f("12.34e-")
+}
+
+func TestParsePositiveNumberSuccess(t *testing.T) {
+	f := func(s string, vExpected float64) {
+		t.Helper()
+		v, err := parsePositiveNumber(s)
+		if err != nil {
+			t.Fatalf("unexpected error in parsePositiveNumber(%q): %s", s, err)
+		}
+		if math.IsNaN(v) {
+			if !math.IsNaN(vExpected) {
+				t.Fatalf("unexpected value returned from parsePositiveNumber(%q); got %v; want %v", s, v, vExpected)
+			}
+		} else if v != vExpected {
+			t.Fatalf("unexpected value returned from parsePositiveNumber(%q); got %v; want %v", s, v, vExpected)
+		}
+	}
+	f("123", 123)
+	f("1.23", 1.23)
+	f("12e5", 12e5)
+	f("1.3E-3", 1.3e-3)
+	f("234.", 234)
+	f("Inf", math.Inf(1))
+	f("NaN", math.NaN())
+	f("0xfe", 0xfe)
+	f("0b0110", 0b0110)
+	f("0O765", 0o765)
+	f("0765", 0765)
+	f("2k", 2*1000)
+	f("2.3Kb", 2.3*1000)
+	f("3ki", 3*1024)
+	f("4.5Kib", 4.5*1024)
+	f("2m", 2*1000*1000)
+	f("2.3Mb", 2.3*1000*1000)
+	f("3Mi", 3*1024*1024)
+	f("4.5mib", 4.5*1024*1024)
+	f("2G", 2*1000*1000*1000)
+	f("2.3gB", 2.3*1000*1000*1000)
+	f("3gI", 3*1024*1024*1024)
+	f("4.5GiB", 4.5*1024*1024*1024)
+	f("2T", 2*1000*1000*1000*1000)
+	f("2.3tb", 2.3*1000*1000*1000*1000)
+	f("3tI", 3*1024*1024*1024*1024)
+	f("4.5TIB", 4.5*1024*1024*1024*1024)
+}
+
+func TestParsePositiveNumberFailure(t *testing.T) {
+	f := func(s string) {
+		t.Helper()
+		v, err := parsePositiveNumber(s)
+		if err == nil {
+			t.Fatalf("expecting non-nil error in parsePositiveNumber(%q); got result %v", s, v)
+		}
+	}
+	f("")
+	f("0xqwert")
+	f("foobar")
+	f("234.foobar")
+	f("123e")
+	f("1233Ebc")
+	f("12.34E+abc")
+	f("12.34e-")
+	f("12.weKB")
+}
 
 func TestIsSpecialIntegerPrefix(t *testing.T) {
 	f := func(s string, resultExpected bool) {
@@ -296,7 +447,6 @@ func TestLexerError(t *testing.T) {
 
 	// Invalid numbers
 	testLexerError(t, `.`)
-	testLexerError(t, `123.`)
 	testLexerError(t, `12e`)
 	testLexerError(t, `1.2e`)
 	testLexerError(t, `1.2E+`)
