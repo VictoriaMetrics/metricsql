@@ -545,6 +545,13 @@ func TestParseError(t *testing.T) {
 	f(`m{x=y+5}`)
 	f(`m keep_metric_names`) // keep_metric_names cannot be used with metric expression
 
+	// Invalid
+	f(`{}[5m:3S]`)
+	f(`{}[5H:]`)
+	f(`{}[5M:3s]`)
+	f(`m[10M]`)
+	f(`m[10MS]`)
+
 	// Invalid @ modifier
 	f(`@`)
 	f(`foo @`)
@@ -555,6 +562,10 @@ func TestParseError(t *testing.T) {
 	f(`foo offset @ 5m`)
 	f(`foo @ 123 offset 5m @ 456`)
 	f(`foo offset 5m @`)
+
+	// offset with uppercase
+	f(`foo offset 5M`)
+	f(`foo offset 5S`)
 
 	// Invalid regexp
 	f(`foo{bar=~"x["}`)
@@ -773,83 +784,4 @@ func TestParseError(t *testing.T) {
 	f(`with (f())`)
 	f(`with (sum(a,b)=a+b) sum(x)`)
 	f(`with (rate()=foobar) rate(x)`)
-}
-
-func TestDurationExprSuccess(t *testing.T) {
-
-	f := func(str string, step int64, want int64) {
-		t.Helper()
-		de := &DurationExpr{
-			s: str,
-		}
-		got, err := de.Duration(step)
-		if err != nil {
-			t.Fatalf("expecting nil error when parsing %q", str)
-		}
-		if got != want {
-			t.Errorf("Duration() got = %v, want %v", got, want)
-		}
-	}
-
-	// Integer durations
-	f("123ms", 42, 123)
-	f("123s", 42, 123*1000)
-	f("123m", 42, 123*60*1000)
-	f("1h", 42, 1*60*60*1000)
-	f("2d", 42, 2*24*60*60*1000)
-	f("3w", 42, 3*7*24*60*60*1000)
-	f("4y", 42, 4*365*24*60*60*1000)
-	f("1i", 42*1000, 42*1000)
-	f("3i", 42, 3*42)
-
-	// Float durations
-	f("123.45ms", 42, 123)
-	f("0.234s", 42, 234)
-	f("1.5s", 42, 1.5*1000)
-	f("1.5m", 42, 1.5*60*1000)
-	f("1.2h", 42, 1.2*60*60*1000)
-	f("1.1d", 42, 1.1*24*60*60*1000)
-	f("1.1w", 42, 1.1*7*24*60*60*1000)
-	f("1.3y", 42, 1.3*365*24*60*60*1000)
-	f("0.1i", 12340, 0.1*12340)
-
-	// Floating-point durations without suffix.
-	f("123", 45, 123000)
-	f("1.23", 45, 1230)
-	f("0.56", 12, 560)
-	f(".523e2", 21, 52300)
-	f("-123s", 42, -123000)
-}
-
-func TestDurationExprError(t *testing.T) {
-
-	f := func(str string, step int64) {
-		t.Helper()
-		de := &DurationExpr{
-			s: str,
-		}
-		_, err := de.Duration(step)
-		if err == nil {
-			t.Fatalf("expecting non-nil error when parsing %q", str)
-		}
-	}
-
-	f(``, 200)
-	f("foo", 42)
-	f("m", 42)
-	f("1.23mm", 42)
-	f("123q", 42)
-
-	// Too big duration
-	f("10000000000y", 42)
-
-	// With uppercase duration
-	f("1M", 23)
-	f("1Ms", 23)
-	f("1MS", 23)
-	f("1Y", 23)
-	f("2W", 23)
-	f("3D", 23)
-	f("3H", 23)
-	f("3S", 23)
 }

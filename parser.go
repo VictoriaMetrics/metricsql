@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 // Parse parses MetricsQL query s.
@@ -1333,6 +1334,9 @@ func (p *parser) parseDuration() (*DurationExpr, error) {
 
 func (p *parser) parsePositiveDuration() (*DurationExpr, error) {
 	s := p.lex.Token
+	if isUpper(s) {
+		return nil, fmt.Errorf("duration: can't contain uppercase letters: %q", s)
+	}
 	if isPositiveDuration(s) {
 		if err := p.lex.Next(); err != nil {
 			return nil, err
@@ -1366,15 +1370,15 @@ func (de *DurationExpr) AppendString(dst []byte) []byte {
 }
 
 // Duration returns the duration from de in milliseconds.
-func (de *DurationExpr) Duration(step int64) (int64, error) {
+func (de *DurationExpr) Duration(step int64) int64 {
 	if de == nil {
-		return 0, nil
+		return 0
 	}
 	d, err := DurationValue(de.s, step)
 	if err != nil {
-		return 0, fmt.Errorf("cannot parse duration %q: %s", de.s, err)
+		panic(fmt.Errorf("BUG: cannot parse duration %q: %s", de.s, err))
 	}
-	return d, nil
+	return d
 }
 
 // parseIdentExpr parses expressions starting with `ident` token.
@@ -1890,4 +1894,13 @@ func (me *MetricExpr) hasNonEmptyMetricGroup() bool {
 
 func (lf *LabelFilter) isMetricNameFilter() bool {
 	return lf.Label == "__name__" && !lf.IsNegative && !lf.IsRegexp
+}
+
+func isUpper(s string) bool {
+	for _, r := range s {
+		if !unicode.IsUpper(r) {
+			return false
+		}
+	}
+	return true
 }
