@@ -571,6 +571,7 @@ func DurationValue(s string, step int64) (int64, error) {
 	}
 	isMinus := false
 	d := float64(0)
+	s = strings.ToLower(s)
 	for len(s) > 0 {
 		n := scanSingleDuration(s, true)
 		if n <= 0 {
@@ -656,6 +657,7 @@ func scanSingleDuration(s string, canBeNegative bool) int {
 	if len(s) == 0 {
 		return -1
 	}
+	s = strings.ToLower(s)
 	i := 0
 	if s[0] == '-' && canBeNegative {
 		i++

@@ -513,6 +513,14 @@ func TestPositiveDurationSuccess(t *testing.T) {
 	f("1.23", 45, 1230)
 	f("0.56", 12, 560)
 	f(".523e2", 21, 52300)
+
+	// duration suffixes in mixed case
+	f("1Ms", 45, 1)
+	f("1mS", 45, 1)
+	f("1M", 45, 1*60*1000)
+	f("1H", 45, 1*60*60*1000)
+	f("1D", 45, 1*24*60*60*1000)
+	f("1Y", 45, 1*365*24*60*60*1000)
 }
 
 func TestPositiveDurationError(t *testing.T) {
@@ -588,6 +596,13 @@ func TestDurationSuccess(t *testing.T) {
 	f("1.23", 45, 1230)
 	f("-0.56", 12, -560)
 	f("-.523e2", 21, -52300)
+
+	f("1Ms", 10, 1)
+	f("1mS", 10, 1)
+	f("1M", 10, 60*1000)
+	f("1H", 10, 1*60*60*1000)
+	f("1D", 10, 1*24*60*60*1000)
+	f("1Y", 10, 1*365*24*60*60*1000)
 }
 
 func TestDurationError(t *testing.T) {

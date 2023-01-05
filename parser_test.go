@@ -309,6 +309,15 @@ func TestParseSuccess(t *testing.T) {
 	// funcName with escape chars
 	same(`foo\(ba\-r()`)
 
+	// duration converts to lower case
+	another(`{}[5m:3S]`, `{}[5m:3S]`)
+	another(`{}[5H:]`, `{}[5H:]`)
+	another(`{}[5M:3s]`, `{}[5M:3s]`)
+	another(`m[10M]`, `m[10M]`)
+	another(`m[10MS]`, `m[10MS]`)
+	another(`foo offset 5M`, `foo offset 5M`)
+	another(`foo offset 5S`, `foo offset 5S`)
+
 	// aggrFuncExpr
 	same(`sum(http_server_request) by ()`)
 	same(`sum(http_server_request) by (job)`)
