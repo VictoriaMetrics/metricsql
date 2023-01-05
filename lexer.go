@@ -576,7 +576,6 @@ func DurationValue(s string, step int64) (int64, error) {
 	}
 	isMinus := false
 	d := float64(0)
-	s = strings.ToLower(s)
 	for len(s) > 0 {
 		n := scanSingleDuration(s, true)
 		if n <= 0 {
@@ -603,6 +602,7 @@ func DurationValue(s string, step int64) (int64, error) {
 }
 
 func parseSingleDuration(s string, step int64) (float64, error) {
+	s = strings.ToLower(s)
 	numPart := s[:len(s)-1]
 	if strings.HasSuffix(numPart, "m") {
 		// Duration in ms

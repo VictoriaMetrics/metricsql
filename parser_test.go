@@ -25,6 +25,7 @@ func TestParseSuccess(t *testing.T) {
 	same(`{}`)
 	same(`{}[5m]`)
 	same(`{}[5m:]`)
+	same(`{}[5M:]`)
 	same(`{}[:]`)
 	another(`{}[: ]`, `{}[:]`)
 	same(`{}[:3s]`)
@@ -33,6 +34,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`{}[ 5m : 3s ]`, `{}[5m:3s]`)
 	same(`{} offset 5m`)
 	same(`{} offset -5m`)
+	same(`{} offset 5M`)
 	same(`{}[5m] offset 10y`)
 	same(`{}[5.3m:3.4s] offset 10y`)
 	same(`{}[:3.4s] offset 10y`)
@@ -182,6 +184,7 @@ func TestParseSuccess(t *testing.T) {
 	same(`1h`)
 	another(`-1h`, `0 - 1h`)
 	same(`0.34h4m5s`)
+	same(`0.34h4M5S`)
 	another(`-0.34h4m5s`, `0 - 0.34h4m5s`)
 	same(`sum_over_tme(m[1h]) / 1h`)
 	same(`sum_over_time(m[3600]) / 3600`)
@@ -308,15 +311,6 @@ func TestParseSuccess(t *testing.T) {
 	same(`rate(rate(m[5m])[1h:3s])`)
 	// funcName with escape chars
 	same(`foo\(ba\-r()`)
-
-	// duration converts to lower case
-	another(`{}[5m:3S]`, `{}[5m:3S]`)
-	another(`{}[5H:]`, `{}[5H:]`)
-	another(`{}[5M:3s]`, `{}[5M:3s]`)
-	another(`m[10M]`, `m[10M]`)
-	another(`m[10MS]`, `m[10MS]`)
-	another(`foo offset 5M`, `foo offset 5M`)
-	another(`foo offset 5S`, `foo offset 5S`)
 
 	// aggrFuncExpr
 	same(`sum(http_server_request) by ()`)
