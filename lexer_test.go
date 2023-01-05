@@ -192,15 +192,18 @@ func TestUnescapeIdent(t *testing.T) {
 	}
 	f("", "")
 	f("a", "a")
-	f("\\", "")
+	f("\\", `\`)
 	f(`\\`, `\`)
 	f(`\foo\-bar`, `foo-bar`)
 	f(`a\\\\b\"c\d`, `a\\b"cd`)
 	f(`foo.bar:baz_123`, `foo.bar:baz_123`)
 	f(`foo\ bar`, `foo bar`)
 	f(`\x21`, `!`)
-	f(`\xeDfoo\x2Fbar\-\xqw\x`, "\xedfoo\x2fbar-xqwx")
+	f(`\x7Dfoo\x2Fbar\-\xqw\x`, "}foo/bar-\\xqw\\x")
 	f(`\п\р\и\в\е\т123`, "привет123")
+	f(`123`, `123`)
+	f(`\123`, `123`)
+	f(`привет\-\foo`, "привет-foo")
 }
 
 func TestAppendEscapedIdent(t *testing.T) {
@@ -214,9 +217,11 @@ func TestAppendEscapedIdent(t *testing.T) {
 	f(`a`, `a`)
 	f(`a.b:c_23`, `a.b:c_23`)
 	f(`a b-cd+dd\`, `a\ b\-cd\+dd\\`)
-	f("a\x1E\x20\xee", `a\x1e\ \xee`)
-	f("\x2e\x2e", `\x2e.`)
-	f("привет123", `\п\р\и\в\е\т123`)
+	f("a\x1E\x20\x7e", `a\x1e\ \~`)
+	f("\x2e\x2e", `\..`)
+	f("123", `\123`)
+	f("+43.6", `\+43.6`)
+	f("привет123(a-b)", `привет123\(a\-b\)`)
 }
 
 func TestScanIdent(t *testing.T) {
@@ -234,6 +239,8 @@ func TestScanIdent(t *testing.T) {
 	f(`a\-b+c`, `a\-b`)
 	f(`a\ b\\\ c\`, `a\ b\\\ c\`)
 	f(`\п\р\и\в\е\т123`, `\п\р\и\в\е\т123`)
+	f(`привет123!foo`, `привет123`)
+	f(`\1fooЫ+bar`, `\1fooЫ`)
 }
 
 func TestLexerNextPrev(t *testing.T) {
@@ -410,15 +417,6 @@ func TestLexerSuccess(t *testing.T) {
 		# yet another comment`
 	expectedTokens = []string{"foobar", "baz"}
 	testLexerSuccess(t, s, expectedTokens)
-
-	s = "тест"
-	expectedTokens = []string{s}
-	testLexerSuccess(t, s, expectedTokens)
-
-	s = `温度{房间="水电费"}[5m] offset 10m`
-	expectedTokens = []string{"温度", "{", "房间", "=", `"水电费"`, "}", "[", "5m", "]", "offset", "10m"}
-	testLexerSuccess(t, s, expectedTokens)
-
 }
 
 func testLexerSuccess(t *testing.T, s string, expectedTokens []string) {

@@ -108,7 +108,9 @@ func TestParseSuccess(t *testing.T) {
 	// identifiers with with escape chars
 	same(`foo\ bar`)
 	same(`foo\-bar\{{baz\+bar="aa"}`)
-	another(`\x2E\x2ef\oo{b\xEF\ar="aa"}`, `\x2e.foo{b\xefar="aa"}`)
+	another(`\x2E\x2ef\oo{b\xEF\ar="aa"}`, `\..foo{bïar="aa"}`)
+	same(`温度{房间="水电费"}[5m] offset 10m`)
+	another(`\温\度{\房\间="水电费"}[5m] offset 10m`, `温度{房间="水电费"}[5m] offset 10m`)
 	same(`sum(fo\|o) by (b\|a, x)`)
 	another(`sum(x) by (b\x7Ca)`, `sum(x) by (b\|a)`)
 	// Duplicate filters
