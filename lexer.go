@@ -571,14 +571,14 @@ func DurationValue(s string, step int64) (int64, error) {
 	}
 	isMinus := false
 	d := float64(0)
-	str := strings.ToLower(s)
-	for len(str) > 0 {
-		n := scanSingleDuration(str, true)
+	s = strings.ToLower(s)
+	for len(s) > 0 {
+		n := scanSingleDuration(s, true)
 		if n <= 0 {
 			return 0, fmt.Errorf("cannot parse duration %q", s)
 		}
-		ds := str[:n]
-		str = str[n:]
+		ds := s[:n]
+		s = s[n:]
 		dLocal, err := parseSingleDuration(ds, step)
 		if err != nil {
 			return 0, err

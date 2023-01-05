@@ -514,7 +514,7 @@ func TestPositiveDurationSuccess(t *testing.T) {
 	f("0.56", 12, 560)
 	f(".523e2", 21, 52300)
 
-	// different durations prefixes
+	// duration suffixes in mixed case
 	f("1Ms", 45, 1)
 	f("1mS", 45, 1)
 	f("1M", 45, 1*60*1000)
