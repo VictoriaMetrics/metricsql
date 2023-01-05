@@ -199,11 +199,16 @@ func TestUnescapeIdent(t *testing.T) {
 	f(`foo.bar:baz_123`, `foo.bar:baz_123`)
 	f(`foo\ bar`, `foo bar`)
 	f(`\x21`, `!`)
+	f(`\X21`, `!`)
 	f(`\x7Dfoo\x2Fbar\-\xqw\x`, "}foo/bar-\\xqw\\x")
 	f(`\п\р\и\в\е\т123`, "привет123")
 	f(`123`, `123`)
 	f(`\123`, `123`)
 	f(`привет\-\foo`, "привет-foo")
+	f(`\u0965`, "\u0965")
+	f(`\U0965`, "\u0965")
+	f(`\u202c`, "\u202c")
+	f(`\U202ca`, "\u202ca")
 }
 
 func TestAppendEscapedIdent(t *testing.T) {
@@ -222,6 +227,8 @@ func TestAppendEscapedIdent(t *testing.T) {
 	f("123", `\123`)
 	f("+43.6", `\+43.6`)
 	f("привет123(a-b)", `привет123\(a\-b\)`)
+	f("\u0965", `\॥`)
+	f("\u202c", `\u202c`)
 }
 
 func TestScanIdent(t *testing.T) {
@@ -237,10 +244,23 @@ func TestScanIdent(t *testing.T) {
 	f("a+b", "a")
 	f("foo()", "foo")
 	f(`a\-b+c`, `a\-b`)
-	f(`a\ b\\\ c\`, `a\ b\\\ c\`)
+	f(`a\ b\\\ c\`, `a\ b\\\ c`)
 	f(`\п\р\и\в\е\т123`, `\п\р\и\в\е\т123`)
 	f(`привет123!foo`, `привет123`)
 	f(`\1fooЫ+bar`, `\1fooЫ`)
+	f(`\u7834*аа`, `\u7834`)
+	f(`\U7834*аа`, `\U7834`)
+	f(`\x7834*аа`, `\x7834`)
+	f(`\X7834*аа`, `\X7834`)
+	f(`a\x+b`, `a`)
+	f(`a\x1+b`, `a`)
+	f(`a\x12+b`, `a\x12`)
+	f(`a\u+b`, `a`)
+	f(`a\u1+b`, `a`)
+	f(`a\u12+b`, `a`)
+	f(`a\u123+b`, `a`)
+	f(`a\u1234+b`, `a\u1234`)
+	f("a\\\u202c", `a`)
 }
 
 func TestLexerNextPrev(t *testing.T) {
@@ -544,6 +564,7 @@ func TestPositiveDurationError(t *testing.T) {
 	f("1.23mm")
 	f("123q")
 	f("-123s")
+	f("1.23.4434s")
 
 	// Too big duration
 	f("10000000000y")

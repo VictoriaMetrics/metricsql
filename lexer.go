@@ -340,12 +340,13 @@ func scanIdent(s string) string {
 			break
 		}
 		i += size
-		r, size = decodeEscapeSequence(s[i:])
+		r, n := decodeEscapeSequence(s[i:])
 		if r == utf8.RuneError {
 			// Invalid escape sequence
+			i -= size
 			break
 		}
-		i += size
+		i += n
 	}
 	if i == 0 {
 		panic("BUG: scanIdent couldn't find a single ident char; make sure isIdentPrefix called before scanIdent")
