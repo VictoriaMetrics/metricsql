@@ -541,7 +541,6 @@ func TestPositiveDurationSuccess(t *testing.T) {
 	// Duration suffixes in mixed case.
 	f("1Ms", 45, 1)
 	f("1mS", 45, 1)
-	f("1M", 45, 1*60*1000)
 	f("1H", 45, 1*60*60*1000)
 	f("1D", 45, 1*24*60*60*1000)
 	f("1Y", 45, 1*365*24*60*60*1000)
@@ -565,9 +564,15 @@ func TestPositiveDurationError(t *testing.T) {
 	f("123q")
 	f("-123s")
 	f("1.23.4434s")
+	f("1mi")
+	f("1mb")
 
 	// Too big duration
 	f("10000000000y")
+
+	// Uppercase M isn't a duration, but a 1e6 multiplier.
+	// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/3664
+	f("1M")
 }
 
 func TestDurationSuccess(t *testing.T) {
@@ -626,7 +631,6 @@ func TestDurationSuccess(t *testing.T) {
 	f("-1Ms", 10, -1)
 	f("-2.5mS", 10, -2)
 	f("-1mS", 10, -1)
-	f("-5.3M", 10, -5.3*60*1000)
 	f("-1H", 10, -1*60*60*1000)
 	f("-3.H", 10, -3*60*60*1000)
 	f("1D", 10, 1*24*60*60*1000)
@@ -650,4 +654,10 @@ func TestDurationError(t *testing.T) {
 	f("1.23mm")
 	f("123q")
 	f("-123q")
+	f("-5.3mb")
+	f("-5.3mi")
+
+	// M isn't a duration, but a 1e6 multiplier.
+	// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/3664
+	f("-5.3M")
 }
