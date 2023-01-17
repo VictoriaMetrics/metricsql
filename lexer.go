@@ -617,6 +617,9 @@ func scanSingleDuration(s string, canBeNegative bool) int {
 		return -1
 	}
 	s = strings.ToLower(s)
+	if strings.Contains(s, "mi") {
+		return -1
+	}
 	i := 0
 	if s[0] == '-' && canBeNegative {
 		i++
