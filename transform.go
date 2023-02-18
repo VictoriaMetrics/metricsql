@@ -82,6 +82,7 @@ var transformFuncs = map[string]bool{
 	"range_stddev":               true,
 	"range_stdvar":               true,
 	"range_sum":                  true,
+	"range_trim_outliers":        true,
 	"range_trim_spikes":          true,
 	"remove_resets":              true,
 	"round":                      true,
