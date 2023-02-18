@@ -74,6 +74,7 @@ var transformFuncs = map[string]bool{
 	"range_first":                true,
 	"range_last":                 true,
 	"range_linear_regression":    true,
+	"range_mad":                  true,
 	"range_max":                  true,
 	"range_min":                  true,
 	"range_normalize":            true,
