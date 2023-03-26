@@ -19,11 +19,6 @@ func shouldWrap(expr Expr) bool {
 	switch expr.(type) {
 	case *MetricExpr, *NumberExpr, *StringExpr, *FuncExpr:
 		return false
-	// case *BinaryOpExpr:
-	// 	var buf []byte
-	// 	b := e.AppendString(buf)
-	// 	log.Printf("B => %s", b)
-	// 	return true
 	default:
 		return true
 	}
