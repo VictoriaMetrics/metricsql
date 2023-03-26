@@ -2,7 +2,6 @@ package metricsql
 
 import (
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -45,7 +44,6 @@ func prettier(expr Expr, indent, maxLineLength int) string {
 	var str strings.Builder
 	var b []byte
 	b = expr.AppendString(b)
-	log.Printf("LEN => %d", len(b))
 	if len(b) <= maxLineLength {
 		paddings := paddings(indent)
 		str.WriteString(paddings)
@@ -173,10 +171,5 @@ func Prettier(s string, maxLineLength int) (string, error) {
 		return "", err
 	}
 
-	// var b []byte
-	// b = expr.AppendString(b)
-	// if len(b) <= 80 {
-	// 	return string(b), nil
-	// }
 	return prettier(expr, 0, maxLineLength), nil
 }
