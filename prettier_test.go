@@ -1032,3 +1032,7 @@ func TestPrettierShot(t *testing.T) {
 	another(`with (sum(a,b)=a+b) sum(c,d)`, `c + d`)
 
 }
+
+func TestLongExpressions(t *testing.T) {
+	// TODO will be added soon
+}
