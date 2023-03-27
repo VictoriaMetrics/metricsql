@@ -13,7 +13,7 @@ func TestPrettier(t *testing.T) {
 		}
 
 		if expected != got {
-			t.Fatalf("string not prettified;\ngot%s\nwant\n%q", got, expected)
+			t.Fatalf("string not prettified;\ngot:%s\nwant\n%q", got, expected)
 		}
 	}
 	same := func(s string) {
@@ -518,7 +518,7 @@ func TestPrettierShot(t *testing.T) {
 		}
 
 		if expected != got {
-			t.Fatalf("string not prettified;\ngot%s\nwant\n%q", got, expected)
+			t.Fatalf("string not prettified;\ngot:%s\nwant\n%q", got, expected)
 		}
 	}
 	same := func(s string) {
@@ -1034,5 +1034,418 @@ func TestPrettierShot(t *testing.T) {
 }
 
 func TestLongExpressions(t *testing.T) {
-	// TODO will be added soon
+	another := func(s, expected string) {
+		t.Helper()
+
+		const maxLineLength = 10
+		got, err := Prettier(s, maxLineLength)
+		if err != nil {
+			t.Fatalf("unexpected error when parsing %q: %s", s, err)
+		}
+
+		if expected != got {
+			t.Fatalf("string not prettified;\ngot:%s\nwant\n%q", got, expected)
+		}
+	}
+
+	another(`((node_memory_MemTotal_bytes{instance=~"node:port", job=~"job"}-node_memory_MemFree_bytes{instance=~"node:port", job=~"job"})/node_memory_MemTotal_bytes{instance=~"node:port", job=~"job"})*100`, `  (
+      (
+          node_memory_MemTotal_bytes{instance=~"node:port", job=~"job"}
+        -
+          node_memory_MemFree_bytes{instance=~"node:port", job=~"job"}
+      )
+    /
+      node_memory_MemTotal_bytes{instance=~"node:port", job=~"job"}
+  )
+*
+  100`)
+	another(`(((count(count(node_cpu_seconds_total{instance=~"node:port",job=~"job"}) by (cpu)))-avg(sum by (mode) (rate(node_cpu_seconds_total{mode='idle',instance=~"node:port",job=~"job"}[5m]))))*100)/count(count(node_cpu_seconds_total{instance=~"node:port",job=~"job"}) by (cpu))`, `  (
+      (
+          (
+            count (
+              count by (cpu) (
+                node_cpu_seconds_total{instance=~"node:port", job=~"job"}
+              )
+            )
+          )
+        -
+          (
+            avg (
+              sum by (mode) (
+                rate (
+                  node_cpu_seconds_total{mode="idle", instance=~"node:port", job=~"job"}[5m]
+                )
+              )
+            )
+          )
+      )
+    *
+      100
+  )
+/
+  (
+    count (
+      count by (cpu) (
+        node_cpu_seconds_total{instance=~"node:port", job=~"job"}
+      )
+    )
+  )`)
+	another(`sum by(job,foo) (sum by(job,foo) (sum by(job,foo) (task:errors:rate10s{job="s"})))`, `sum by (job, foo) (
+  sum by (job, foo) (
+    sum by (job, foo) (
+      task:errors:rate10s{job="s"}
+    )
+  )
+)`)
+	another(`foo_1 + ignoring(foo) foo_2 + ignoring(job) group_left foo_3 + on(instance) group_right foo_4`, `  (
+      (
+          foo_1
+        + ignoring (foo)
+          foo_2
+      )
+    + ignoring (job) group_left ()
+      foo_3
+  )
++ on (instance) group_right ()
+  foo_4`)
+	another(`irate(very_long_vector_selector[10m:1m] @ start() offset 1m)`, `irate (
+  very_long_vector_selector[10m:1m] offset 1m @ (start())
+)`)
+	another(`histogram_quantile(0.9, rate(instance_cpu_time_seconds{app="webapp", job="agent", instance="cluster-admin"}[5m]))`, `histogram_quantile (
+  0.9,
+  rate (
+    instance_cpu_time_seconds{app="webapp", job="agent", instance="cluster-admin"}[5m]
+  )
+)`)
+	another(`topk(10, (sum without(env) (instance_cpu_time_ns{app="app", job="admin", revision="14d2e34", env="dev", job="cluster-admin"})))`, `topk (
+  10,
+  sum without (env) (
+    instance_cpu_time_ns{app="app", job="admin", revision="14d2e34", env="dev", job="cluster-admin"}
+  )
+)`)
+	another(`max_over_time(rate(new_http_request_duration_seconds_count[1m])[1m:] @ start() offset 1m)`, `max_over_time (
+  rate (
+    new_http_request_duration_seconds_count[1m]
+  )[1m:] offset 1m @ (start())
+)`)
+	another(`label_replace(label_replace(up{job="vmadmin",service="host:port"}, "foo", "$1", "service", "(.*):.*"), "foo", "$1", "service", "(.*):.*")`, `label_replace (
+  label_replace (
+    up{job="vmadmin", service="host:port"},
+    "foo",
+    "$1",
+    "service",
+    "(.*):.*"
+  ),
+  "foo",
+  "$1",
+  "service",
+  "(.*):.*"
+)`)
+	another(`min(vm_free_disk_space_bytes{job=~"job_storage", instance=~"instance"}/ignoring(path) ((rate(vm_rows_added_to_storage_total{job=~"job_storage", instance=~"instance"}[1d])-ignoring(type) rate(vm_deduplicated_samples_total{job=~"job_storage", instance=~"instance", type="merge"}[1d])) * scalar(sum(vm_data_size_bytes{job=~"job_storage", instance=~"instance", type!~"indexdb.*"})/sum(vm_rows{job=~"job_storage", instance=~"instance", type!~"indexdb.*"}))))`, `min (
+    vm_free_disk_space_bytes{job=~"job_storage", instance=~"instance"}
+  / ignoring (path)
+    (
+        (
+            rate (
+              vm_rows_added_to_storage_total{job=~"job_storage", instance=~"instance"}[1d]
+            )
+          - ignoring (type)
+            rate (
+              vm_deduplicated_samples_total{job=~"job_storage", instance=~"instance", type="merge"}[1d]
+            )
+        )
+      *
+        scalar (
+            (
+              sum (
+                vm_data_size_bytes{job=~"job_storage", instance=~"instance", type!~"indexdb.*"}
+              )
+            )
+          /
+            (
+              sum (
+                vm_rows{job=~"job_storage", instance=~"instance", type!~"indexdb.*"}
+              )
+            )
+        )
+    )
+)`)
+	another(`max(rate(process_cpu_seconds_total{job=~"job_storage", instance=~"instance"}[10m])/process_cpu_cores_available{job=~"job_storage", instance=~"instance"})`, `max (
+    rate (
+      process_cpu_seconds_total{job=~"job_storage", instance=~"instance"}[10m]
+    )
+  /
+    process_cpu_cores_available{job=~"job_storage", instance=~"instance"}
+)`)
+	another(`max(sum(vm_data_size_bytes{job=~"$job", instance=~"$instance"}) by(job, instance) /(sum(vm_free_disk_space_bytes{job=~"$job", instance=~"$instance"}) by(job, instance) +sum(vm_data_size_bytes{job=~"$job", instance=~"$instance"}) by(job, instance)))`, `max (
+    (
+      sum by (job, instance) (
+        vm_data_size_bytes{job=~"$job", instance=~"$instance"}
+      )
+    )
+  /
+    (
+        (
+          sum by (job, instance) (
+            vm_free_disk_space_bytes{job=~"$job", instance=~"$instance"}
+          )
+        )
+      +
+        (
+          sum by (job, instance) (
+            vm_data_size_bytes{job=~"$job", instance=~"$instance"}
+          )
+        )
+    )
+)`)
+	another(`max without (endpoint) (sum without (instance) (up{job=~".*etcd.*"} == bool 0) or count without (To) (sum without (instance) (rate(etcd_network_peer_sent_failures_total{job=~".*etcd.*"}[120s])) > 0.01))> 0`, `  (
+    max without (endpoint) (
+        (
+          sum without (instance) (
+              up{job=~".*etcd.*"}
+            == bool
+              0
+          )
+        )
+      or
+        (
+          count without (To) (
+              (
+                sum without (instance) (
+                  rate (
+                    etcd_network_peer_sent_failures_total{job=~".*etcd.*"}[120s]
+                  )
+                )
+              )
+            >
+              0.01
+          )
+        )
+    )
+  )
+>
+  0`)
+	another(`histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{job=~".*etcd.*", grpc_method!="Defragment", grpc_type="unary"}[5m])) without(grpc_type))> 0.15`, `  histogram_quantile (
+    0.99,
+    sum without (grpc_type) (
+      rate (
+        grpc_server_handling_seconds_bucket{job=~".*etcd.*", grpc_method!="Defragment", grpc_type="unary"}[5m]
+      )
+    )
+  )
+>
+  0.15`)
+	another(`(rate(prometheus_tsdb_head_samples_appended_total{job="prometheus"}[5m]) <= 0 and (sum without(scrape_job) (prometheus_target_metadata_cache_entries{job="prometheus"}) > 0 or sum without(rule_group) (prometheus_rule_group_rules{job="prometheus"}) > 0))`, `  (
+      rate (
+        prometheus_tsdb_head_samples_appended_total{job="prometheus"}[5m]
+      )
+    <=
+      0
+  )
+and
+  (
+      (
+          (
+            sum without (scrape_job) (
+              prometheus_target_metadata_cache_entries{job="prometheus"}
+            )
+          )
+        >
+          0
+      )
+    or
+      (
+          (
+            sum without (rule_group) (
+              prometheus_rule_group_rules{job="prometheus"}
+            )
+          )
+        >
+          0
+      )
+  )`)
+	another(`(histogram_quantile(0.90, sum by (job, instance, namespace, type, le) (rate(promscale_ingest_duration_seconds_bucket[5m]))) > 10 and sum by (job, instance, namespace, type) (rate(promscale_ingest_duration_seconds_bucket[5m]))) > 0`, `  (
+      (
+          histogram_quantile (
+            0.90,
+            sum by (job, instance, namespace, type, le) (
+              rate (
+                promscale_ingest_duration_seconds_bucket[5m]
+              )
+            )
+          )
+        >
+          10
+      )
+    and
+      (
+        sum by (job, instance, namespace, type) (
+          rate (
+            promscale_ingest_duration_seconds_bucket[5m]
+          )
+        )
+      )
+  )
+>
+  0`)
+	another(`1 - ((node_memory_MemAvailable_bytes{job="node"} or (node_memory_Buffers_bytes{job="node"} + node_memory_Cached_bytes{job="node"} + node_memory_MemFree_bytes{job="node"} + node_memory_Slab_bytes{job="node"}) ) / node_memory_MemTotal_bytes{job="node"})`, `  1
+-
+  (
+      (
+          node_memory_MemAvailable_bytes{job="node"}
+        or
+          (
+              (
+                  (
+                      node_memory_Buffers_bytes{job="node"}
+                    +
+                      node_memory_Cached_bytes{job="node"}
+                  )
+                +
+                  node_memory_MemFree_bytes{job="node"}
+              )
+            +
+              node_memory_Slab_bytes{job="node"}
+          )
+      )
+    /
+      node_memory_MemTotal_bytes{job="node"}
+  )`)
+	another(`(node_timex_offset_seconds{job="node"} > 0.05 and deriv(node_timex_offset_seconds{job="node"}[5m]) >= 0) or (node_timex_offset_seconds{job="node"} < -0.05 and deriv(node_timex_offset_seconds{job="node"}[5m]) <= 0)`, `  (
+      (
+          node_timex_offset_seconds{job="node"}
+        >
+          0.05
+      )
+    and
+      (
+          deriv (
+            node_timex_offset_seconds{job="node"}[5m]
+          )
+        >=
+          0
+      )
+  )
+or
+  (
+      (
+          node_timex_offset_seconds{job="node"}
+        <
+          -0.05
+      )
+    and
+      (
+          deriv (
+            node_timex_offset_seconds{job="node"}[5m]
+          )
+        <=
+          0
+      )
+  )`)
+	another(`(count by (job) (changes(process_start_time_seconds{job="alertmanager"}[10m]) > 4) / count by (job) (up{job="alertmanager"})) >= 0.5`, `  (
+      (
+        count by (job) (
+            changes (
+              process_start_time_seconds{job="alertmanager"}[10m]
+            )
+          >
+            4
+        )
+      )
+    /
+      (
+        count by (job) (
+          up{job="alertmanager"}
+        )
+      )
+  )
+>=
+  0.5`)
+	another(`WITH (commonFilters = {instance=~"$node:$port",job=~"$job"}) (((count(count(node_cpu_seconds_total{commonFilters}) by (cpu)))-avg(sum by (mode) (rate(node_cpu_seconds_total{mode='idle',commonFilters}[5m]))))*100)/count(count(node_cpu_seconds_total{commonFilters}) by (cpu))`, `  (
+      (
+          (
+            count (
+              count by (cpu) (
+                node_cpu_seconds_total{instance=~"$node:$port", job=~"$job"}
+              )
+            )
+          )
+        -
+          (
+            avg (
+              sum by (mode) (
+                rate (
+                  node_cpu_seconds_total{mode="idle", instance=~"$node:$port", job=~"$job"}[5m]
+                )
+              )
+            )
+          )
+      )
+    *
+      100
+  )
+/
+  (
+    count (
+      count by (cpu) (
+        node_cpu_seconds_total{instance=~"$node:$port", job=~"$job"}
+      )
+    )
+  )`)
+	another(`WITH (commonFilters = {instance=~"$node:$port",job=~"$job"}, cpuCount = count(count(node_cpu_seconds_total{commonFilters}) by (cpu)))((cpuCount-avg(sum by (mode) (rate(node_cpu_seconds_total{mode='idle',commonFilters}[5m]))))*100) / cpuCount`, `  (
+      (
+          (
+            count (
+              count by (cpu) (
+                node_cpu_seconds_total{instance=~"$node:$port", job=~"$job"}
+              )
+            )
+          )
+        -
+          (
+            avg (
+              sum by (mode) (
+                rate (
+                  node_cpu_seconds_total{mode="idle", instance=~"$node:$port", job=~"$job"}[5m]
+                )
+              )
+            )
+          )
+      )
+    *
+      100
+  )
+/
+  (
+    count (
+      count by (cpu) (
+        node_cpu_seconds_total{instance=~"$node:$port", job=~"$job"}
+      )
+    )
+  )`)
+	another(`rate(remote_storage_samples_in_total{cluster=~"$cluster", instance=~"$instance"}[5m])- ignoring(remote_name, url) group_right(instance) (rate(remote_storage_succeeded_samples_total{cluster=~"$cluster", instance=~"$instance"}[5m]) or rate(remote_storage_samples_total{cluster=~"$cluster", instance=~"$instance"}[5m]))- (rate(remote_storage_dropped_samples_total{cluster=~"$cluster", instance=~"$instance"}[5m]) or rate(remote_storage_samples_dropped_total{cluster=~"$cluster", instance=~"$instance"}[5m]))`, `  (
+      rate (
+        remote_storage_samples_in_total{cluster=~"$cluster", instance=~"$instance"}[5m]
+      )
+    - ignoring (remote_name, url) group_right (instance)
+      (
+          rate (
+            remote_storage_succeeded_samples_total{cluster=~"$cluster", instance=~"$instance"}[5m]
+          )
+        or
+          rate (
+            remote_storage_samples_total{cluster=~"$cluster", instance=~"$instance"}[5m]
+          )
+      )
+  )
+-
+  (
+      rate (
+        remote_storage_dropped_samples_total{cluster=~"$cluster", instance=~"$instance"}[5m]
+      )
+    or
+      rate (
+        remote_storage_samples_dropped_total{cluster=~"$cluster", instance=~"$instance"}[5m]
+      )
+  )`)
 }
