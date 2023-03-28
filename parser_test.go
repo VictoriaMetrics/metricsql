@@ -493,6 +493,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (window = 1m) (foo[window])`, `foo[1m]`)
 	another(`with (window = 1234) (foo[window])`, `foo[1234]`)
 	another(`with (window = now()) (foo[window])`, `foo[now()]`)
+	another(`with (window = (day_of_month() - 1) * 24 + hour()) (foo[window])`, `foo[((((day_of_month() - 1)) * 24) + hour())]`)
 }
 
 func TestParseError(t *testing.T) {
