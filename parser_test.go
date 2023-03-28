@@ -492,6 +492,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (sum(a,b)=a+b) sum(c,d)`, `c + d`)
 	another(`with (window = 1m) (foo[window])`, `foo[1m]`)
 	another(`with (window = 1234) (foo[window])`, `foo[1234]`)
+	another(`with (window = now()) (foo[window])`, `foo[now()]`)
 }
 
 func TestParseError(t *testing.T) {

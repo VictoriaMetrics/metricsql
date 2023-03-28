@@ -2,6 +2,7 @@ package metricsql
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -754,21 +755,23 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 			}
 			re.At = atNew
 		}
-		if t.Window != nil && !t.Window.resolved {
-			windowNew, err := expandWithExpr(was, t.Window)
-			if err != nil {
-				return nil, err
-			}
-			switch v := windowNew.(type) {
-			case *DurationExpr:
-				re.Window = v
-			case *NumberExpr:
-				re.Window = &DurationExpr{
-					s:        v.s,
-					resolved: true,
+		if t.Window != nil && !reflect.ValueOf(t.Window).IsNil() {
+			if durExpr, ok := t.Window.(*DurationExpr); ok && !durExpr.resolved {
+				windowNew, err := expandWithExpr(was, t.Window)
+				if err != nil {
+					return nil, err
 				}
-			default:
-				return nil, fmt.Errorf(`duration: unexpected expr %q; want "duration"`, v)
+				switch v := windowNew.(type) {
+				case *DurationExpr:
+					re.Window = v
+				case *NumberExpr:
+					re.Window = &DurationExpr{
+						s:        v.s,
+						resolved: true,
+					}
+				default:
+					re.Window = windowNew
+				}
 			}
 		}
 		return &re, nil
@@ -876,7 +879,7 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 		}
 		wa := getWithArgExpr(was, t.s)
 		if wa == nil {
-			return t, fmt.Errorf(`duration: unexpected token %q; want "duration"`, t.s)
+			return nil, fmt.Errorf(`duration: unexpected token %q; want "duration"`, t.s)
 		}
 		newDur, err := expandWithExprExt(was, wa, nil)
 		if err != nil {
@@ -1760,7 +1763,7 @@ type RollupExpr struct {
 	// Window contains optional window value from square brackets
 	//
 	// For example, `http_requests_total[5m]` will have Window value `5m`.
-	Window *DurationExpr
+	Window Expr
 
 	// Offset contains optional value from `offset` part.
 	//
