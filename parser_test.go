@@ -490,6 +490,8 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (rate(a) = b) c`, `c`)
 	another(`rate(x) + with (rate(a,b)=a*b) rate(2,b)`, `rate(x) + (2 * b)`)
 	another(`with (sum(a,b)=a+b) sum(c,d)`, `c + d`)
+	another(`with (window = 1m) (foo[window])`, `foo[1m]`)
+	another(`with (window = 1234) (foo[window])`, `foo[1234]`)
 }
 
 func TestParseError(t *testing.T) {

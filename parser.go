@@ -754,6 +754,23 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 			}
 			re.At = atNew
 		}
+		if t.Window != nil && !t.Window.resolved {
+			windowNew, err := expandWithExpr(was, t.Window)
+			if err != nil {
+				return nil, err
+			}
+			switch v := windowNew.(type) {
+			case *DurationExpr:
+				re.Window = v
+			case *NumberExpr:
+				re.Window = &DurationExpr{
+					s:        v.s,
+					resolved: true,
+				}
+			default:
+				return nil, fmt.Errorf(`duration: unexpected expr %q; want "duration"`, v)
+			}
+		}
 		return &re, nil
 	case *withExpr:
 		wasNew := make([]*withArgExpr, 0, len(was)+len(t.Was))
@@ -853,6 +870,19 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 		reNew := *re
 		reNew.Expr = &me
 		return &reNew, nil
+	case *DurationExpr:
+		if t.resolved {
+			return t, nil
+		}
+		wa := getWithArgExpr(was, t.s)
+		if wa == nil {
+			return t, fmt.Errorf(`duration: unexpected token %q; want "duration"`, t.s)
+		}
+		newDur, err := expandWithExprExt(was, wa, nil)
+		if err != nil {
+			return nil, err
+		}
+		return newDur, nil
 	default:
 		return e, nil
 	}
@@ -1328,28 +1358,33 @@ func (p *parser) parseDuration() (*DurationExpr, error) {
 
 func (p *parser) parsePositiveDuration() (*DurationExpr, error) {
 	s := p.lex.Token
+	resolved := false
 	if isPositiveDuration(s) {
 		if err := p.lex.Next(); err != nil {
 			return nil, err
 		}
+		resolved = true
 	} else {
-		if !isPositiveNumberPrefix(s) {
-			return nil, fmt.Errorf(`duration: unexpected token %q; want "duration"`, s)
-		}
 		// Verify the duration in seconds without explicit suffix.
-		if _, err := p.parsePositiveNumberExpr(); err != nil {
-			return nil, fmt.Errorf(`duration: parse error: %s`, err)
+		if _, err := p.parsePositiveNumberExpr(); err == nil {
+			resolved = true
+		} else {
+			if err := p.lex.Next(); err != nil {
+				return nil, err
+			}
 		}
 	}
 	de := &DurationExpr{
-		s: s,
+		s:        s,
+		resolved: resolved,
 	}
 	return de, nil
 }
 
 // DurationExpr contains the duration
 type DurationExpr struct {
-	s string
+	s        string
+	resolved bool
 }
 
 // AppendString appends string representation of de to dst and returns the result.
@@ -1370,6 +1405,11 @@ func (de *DurationExpr) Duration(step int64) int64 {
 		panic(fmt.Errorf("BUG: cannot parse duration %q: %s", de.s, err))
 	}
 	return d
+}
+
+func (de *DurationExpr) verify() error {
+
+	return nil
 }
 
 // parseIdentExpr parses expressions starting with `ident` token.
