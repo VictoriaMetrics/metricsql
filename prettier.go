@@ -7,12 +7,9 @@ import (
 
 const indentString = "  "
 
-func paddings(indent int) string {
-	var str strings.Builder
-	for i := 0; i < indent; i++ {
-		str.WriteString(indentString)
-	}
-	return str.String()
+func pad(indent int, s string) string {
+	p := strings.Repeat(indentString, indent)
+	return p + s
 }
 
 func shouldWrap(expr Expr) bool {
@@ -25,11 +22,10 @@ func shouldWrap(expr Expr) bool {
 }
 
 func wrapWithBraces(expr Expr, b *strings.Builder, indent, maxLineLength int) {
-	paddings := paddings(indent)
 	if shouldWrap(expr) {
-		b.WriteString(paddings + "(\n")
+		b.WriteString(pad(indent, "(\n"))
 		b.WriteString(prettier(expr, indent+1, maxLineLength))
-		b.WriteString("\n" + paddings + ")")
+		b.WriteString("\n" + pad(indent, ")"))
 	} else {
 		b.WriteString(prettier(expr, indent, maxLineLength))
 	}
@@ -40,8 +36,7 @@ func prettier(expr Expr, indent, maxLineLength int) string {
 	var b []byte
 	b = expr.AppendString(b)
 	if len(b) <= maxLineLength {
-		paddings := paddings(indent)
-		str.WriteString(paddings)
+		str.WriteString(pad(indent, ""))
 		str.Write(b)
 		return str.String()
 	}
@@ -68,14 +63,16 @@ func prettier(expr Expr, indent, maxLineLength int) string {
 
 		str.WriteString(aggrFuncStr.String())
 	case *MetricExpr, *NumberExpr, *StringExpr:
-		paddings := paddings(indent)
 		var b []byte
-		str.WriteString(paddings)
+		str.WriteString(pad(indent, ""))
 		str.Write(e.AppendString(b))
 	case *FuncExpr:
 		buildFuncExpr(&str, e, indent, maxLineLength)
+	default:
+		e.AppendString(b)
+		str.WriteString(pad(indent, ""))
+		str.Write(b)
 	}
-
 	return str.String()
 }
 
@@ -85,7 +82,7 @@ func buildRollupFunc(rollupStr *strings.Builder, e *RollupExpr) {
 		if e.Window != nil {
 			var b []byte
 			b = e.Window.AppendString(b)
-			rollupStr.WriteString(string(b))
+			rollupStr.Write(b)
 		}
 		if e.Step != nil {
 			rollupStr.WriteString(":")
@@ -105,8 +102,7 @@ func buildRollupFunc(rollupStr *strings.Builder, e *RollupExpr) {
 }
 
 func buildBinaryOp(binaryOpStr *strings.Builder, e *BinaryOpExpr, indent int) {
-	paddings := paddings(indent)
-	binaryOpStr.WriteString(fmt.Sprintf("\n%s%s", paddings, e.Op))
+	binaryOpStr.WriteString(fmt.Sprintf("\n%s%s", pad(indent, ""), e.Op))
 	if e.Bool {
 		binaryOpStr.WriteString(" bool")
 	}
@@ -122,8 +118,7 @@ func buildBinaryOp(binaryOpStr *strings.Builder, e *BinaryOpExpr, indent int) {
 }
 
 func buildAggrFuncString(aggrFuncStr *strings.Builder, e *AggrFuncExpr, indent, maxLineLength int) {
-	paddings := paddings(indent)
-	aggrFuncStr.WriteString(paddings + e.Name)
+	aggrFuncStr.WriteString(pad(indent, e.Name))
 	if e.Modifier.Op != "" {
 		aggrFuncStr.WriteString(" ")
 		aggrFuncStr.Write(e.Modifier.AppendString(nil))
@@ -136,17 +131,16 @@ func buildAggrFuncString(aggrFuncStr *strings.Builder, e *AggrFuncExpr, indent, 
 		}
 		aggrFuncStr.WriteString("\n")
 	}
-	aggrFuncStr.WriteString(paddings + ")")
+	aggrFuncStr.WriteString(pad(indent, ")"))
 }
 
 func buildFuncExpr(funcStr *strings.Builder, e *FuncExpr, indent, maxLineLength int) {
-	paddings := paddings(indent)
 	if e.Name == "time" {
-		funcStr.WriteString(paddings + "time ()")
+		funcStr.WriteString(pad(indent, "time ()"))
 	} else {
 		var funcExprStr strings.Builder
 
-		funcExprStr.WriteString(paddings + e.Name + " (\n")
+		funcExprStr.WriteString(pad(indent, e.Name) + " (\n")
 		for i, a := range e.Args {
 			funcExprStr.WriteString(prettier(a, indent+1, maxLineLength))
 			if i < len(e.Args)-1 {
@@ -154,7 +148,7 @@ func buildFuncExpr(funcStr *strings.Builder, e *FuncExpr, indent, maxLineLength 
 			}
 			funcExprStr.WriteString("\n")
 		}
-		funcExprStr.WriteString(paddings + ")")
+		funcExprStr.WriteString(pad(indent, ")"))
 
 		funcStr.WriteString(funcExprStr.String())
 	}
