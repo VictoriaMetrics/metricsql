@@ -7,7 +7,7 @@ func TestPrettier(t *testing.T) {
 		t.Helper()
 
 		const maxLineLength = 130
-		got, err := Prettier(s, maxLineLength)
+		got, err := Prettify(s, maxLineLength)
 		if err != nil {
 			t.Fatalf("unexpected error when parsing %q: %s", s, err)
 		}
@@ -512,7 +512,7 @@ func TestPrettierShot(t *testing.T) {
 		t.Helper()
 
 		const maxLineLength = 80
-		got, err := Prettier(s, maxLineLength)
+		got, err := Prettify(s, maxLineLength)
 		if err != nil {
 			t.Fatalf("unexpected error when parsing %q: %s", s, err)
 		}
@@ -1038,7 +1038,7 @@ func TestLongExpressions(t *testing.T) {
 		t.Helper()
 
 		const maxLineLength = 10
-		got, err := Prettier(s, maxLineLength)
+		got, err := Prettify(s, maxLineLength)
 		if err != nil {
 			t.Fatalf("unexpected error when parsing %q: %s", s, err)
 		}

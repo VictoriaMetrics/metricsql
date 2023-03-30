@@ -24,14 +24,14 @@ func shouldWrap(expr Expr) bool {
 func wrapWithBraces(expr Expr, b *strings.Builder, indent, maxLineLength int) {
 	if shouldWrap(expr) {
 		b.WriteString(pad(indent, "(\n"))
-		b.WriteString(prettier(expr, indent+1, maxLineLength))
+		b.WriteString(prettify(expr, indent+1, maxLineLength))
 		b.WriteString("\n" + pad(indent, ")"))
 	} else {
-		b.WriteString(prettier(expr, indent, maxLineLength))
+		b.WriteString(prettify(expr, indent, maxLineLength))
 	}
 }
 
-func prettier(expr Expr, indent, maxLineLength int) string {
+func prettify(expr Expr, indent, maxLineLength int) string {
 	var str strings.Builder
 	var b []byte
 	b = expr.AppendString(b)
@@ -125,7 +125,7 @@ func buildAggrFuncString(aggrFuncStr *strings.Builder, e *AggrFuncExpr, indent, 
 	}
 	aggrFuncStr.WriteString(" (\n")
 	for i, a := range e.Args {
-		aggrFuncStr.WriteString(prettier(a, indent+1, maxLineLength))
+		aggrFuncStr.WriteString(prettify(a, indent+1, maxLineLength))
 		if i < len(e.Args)-1 {
 			aggrFuncStr.WriteString(",")
 		}
@@ -142,7 +142,7 @@ func buildFuncExpr(funcStr *strings.Builder, e *FuncExpr, indent, maxLineLength 
 
 		funcExprStr.WriteString(pad(indent, e.Name) + " (\n")
 		for i, a := range e.Args {
-			funcExprStr.WriteString(prettier(a, indent+1, maxLineLength))
+			funcExprStr.WriteString(prettify(a, indent+1, maxLineLength))
 			if i < len(e.Args)-1 {
 				funcExprStr.WriteString(",")
 			}
@@ -154,11 +154,11 @@ func buildFuncExpr(funcStr *strings.Builder, e *FuncExpr, indent, maxLineLength 
 	}
 }
 
-func Prettier(s string, maxLineLength int) (string, error) {
+func Prettify(s string, maxLineLength int) (string, error) {
 	expr, err := Parse(s)
 	if err != nil {
 		return "", err
 	}
 
-	return prettier(expr, 0, maxLineLength), nil
+	return prettify(expr, 0, maxLineLength), nil
 }
