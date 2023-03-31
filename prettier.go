@@ -67,7 +67,11 @@ func prettify(expr Expr, indent, maxLineLength int) string {
 		str.WriteString(pad(indent, ""))
 		str.Write(e.AppendString(b))
 	case *FuncExpr:
-		buildFuncExpr(&str, e, indent, maxLineLength)
+		if hasNoArgs(e) {
+			str.WriteString(pad(indent, e.Name))
+		} else {
+			buildFuncExpr(&str, e, indent, maxLineLength)
+		}
 	default:
 		e.AppendString(b)
 		str.WriteString(pad(indent, ""))
@@ -134,24 +138,23 @@ func buildAggrFuncString(aggrFuncStr *strings.Builder, e *AggrFuncExpr, indent, 
 	aggrFuncStr.WriteString(pad(indent, ")"))
 }
 
+func hasNoArgs(e *FuncExpr) bool {
+	return len(e.Args) == 0
+}
+
 func buildFuncExpr(funcStr *strings.Builder, e *FuncExpr, indent, maxLineLength int) {
-	if e.Name == "time" {
-		funcStr.WriteString(pad(indent, "time ()"))
-	} else {
-		var funcExprStr strings.Builder
-
-		funcExprStr.WriteString(pad(indent, e.Name) + " (\n")
-		for i, a := range e.Args {
-			funcExprStr.WriteString(prettify(a, indent+1, maxLineLength))
-			if i < len(e.Args)-1 {
-				funcExprStr.WriteString(",")
-			}
-			funcExprStr.WriteString("\n")
+	var funcExprStr strings.Builder
+	funcExprStr.WriteString(pad(indent, e.Name) + " (\n")
+	for i, a := range e.Args {
+		funcExprStr.WriteString(prettify(a, indent+1, maxLineLength))
+		if i < len(e.Args)-1 {
+			funcExprStr.WriteString(",")
 		}
-		funcExprStr.WriteString(pad(indent, ")"))
-
-		funcStr.WriteString(funcExprStr.String())
+		funcExprStr.WriteString("\n")
 	}
+	funcExprStr.WriteString(pad(indent, ")"))
+
+	funcStr.WriteString(funcExprStr.String())
 }
 
 func Prettify(s string, maxLineLength int) (string, error) {
