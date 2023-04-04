@@ -20,7 +20,10 @@ func TestPushdownBinaryOpFilters(t *testing.T) {
 		if !ok {
 			t.Fatalf("filters=%s must be a metrics expression; got %T", filters, filtersExpr)
 		}
-		resultExpr := PushdownBinaryOpFilters(e, me.LabelFilters)
+		var resultExpr = e
+		if len(me.LabelFilters) > 0 {
+			resultExpr = PushdownBinaryOpFilters(e, me.LabelFilters[0])
+		}
 		result := resultExpr.AppendString(nil)
 		if string(result) != resultExpected {
 			t.Fatalf("unexpected result for PushdownBinaryOpFilters(%s, %s);\ngot\n%s\nwant\n%s", q, filters, result, resultExpected)
@@ -58,7 +61,7 @@ func TestGetCommonLabelFilters(t *testing.T) {
 		}
 		lfs := getCommonLabelFilters(e)
 		me := &MetricExpr{
-			LabelFilters: lfs,
+			LabelFilters: [][]LabelFilter{lfs},
 		}
 		result := me.AppendString(nil)
 		if string(result) != resultExpected {
