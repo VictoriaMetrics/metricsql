@@ -383,6 +383,12 @@ func (p *parser) parseExpr() (Expr, error) {
 		}
 		be.Right = e2
 		e = balanceBinaryOp(&be)
+		if isKeepMetricNames(p.lex.Token) {
+			be.KeepMetricNames = true
+			if err := p.lex.Next(); err != nil {
+				return nil, err
+			}
+		}
 	}
 }
 
@@ -1532,6 +1538,9 @@ type BinaryOpExpr struct {
 	// JoinModifier contains modifier such as "group_left" or "group_right".
 	JoinModifier ModifierExpr
 
+	// If KeepMetricNames is set to true, then the operation should keep metric names.
+	KeepMetricNames bool
+
 	// Left contains left arg for the `left op right` expression.
 	Left Expr
 
@@ -1568,6 +1577,9 @@ func (be *BinaryOpExpr) AppendString(dst []byte) []byte {
 		dst = append(dst, ')')
 	} else {
 		dst = be.Right.AppendString(dst)
+	}
+	if be.KeepMetricNames {
+		dst = append(dst, " keep_metric_names"...)
 	}
 	return dst
 }
