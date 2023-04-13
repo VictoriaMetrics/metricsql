@@ -25,7 +25,6 @@ func TestParseSuccess(t *testing.T) {
 	same(`{}`)
 	same(`{}[5m]`)
 	same(`{}[5m:]`)
-	same(`{}[5M:]`)
 	same(`{}[:]`)
 	another(`{}[: ]`, `{}[:]`)
 	same(`{}[:3s]`)
@@ -34,7 +33,6 @@ func TestParseSuccess(t *testing.T) {
 	another(`{}[ 5m : 3s ]`, `{}[5m:3s]`)
 	same(`{} offset 5m`)
 	same(`{} offset -5m`)
-	same(`{} offset 5M`)
 	same(`{}[5m] offset 10y`)
 	same(`{}[5.3m:3.4s] offset 10y`)
 	same(`{}[:3.4s] offset 10y`)
@@ -510,6 +508,7 @@ func TestParseError(t *testing.T) {
 	f("  \t\b\r\n  ")
 
 	// invalid metricExpr
+	f(`{}[5M:]`)
 	f(`foo[-55]`)
 	f(`m[-5m]`)
 	f(`{`)
