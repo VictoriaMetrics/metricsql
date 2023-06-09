@@ -13,16 +13,13 @@ import (
 //   - Adds missing filters to `foo{filters1} op bar{filters2}`
 //     according to https://utcc.utoronto.ca/~cks/space/blog/sysadmin/PrometheusLabelNonOptimization
 //     I.e. such query is converted to `foo{filters1, filters2} op bar{filters1, filters2}`
-func Optimize(e Expr) (Expr, error) {
+func Optimize(e Expr) Expr {
 	if !canOptimize(e) {
-		return e, nil
+		return e
 	}
-	eCopy, err := Clone(e)
-	if err != nil {
-		return nil, fmt.Errorf("cannot optimize the expression %q: %w", e, err)
-	}
+	eCopy := Clone(e)
 	optimizeInplace(eCopy)
-	return eCopy, nil
+	return eCopy
 }
 
 func canOptimize(e Expr) bool {
@@ -48,9 +45,13 @@ func canOptimize(e Expr) bool {
 }
 
 // Clone clones the given expression e and returns the cloned copy.
-func Clone(e Expr) (Expr, error) {
+func Clone(e Expr) Expr {
 	s := e.AppendString(nil)
-	return Parse(string(s))
+	eCopy, err := Parse(string(s))
+	if err != nil {
+		panic(fmt.Errorf("BUG: cannot parse the expression %q: %w", s, err))
+	}
+	return eCopy
 }
 
 func optimizeInplace(e Expr) {
@@ -196,17 +197,14 @@ func getLabelFiltersWithoutMetricName(lfs []LabelFilter) []LabelFilter {
 // For example, if e contains `foo + sum(bar)` and commonFilters={x="y"},
 // then the returned expression will contain `foo{x="y"} + sum(bar)`.
 // The `{x="y"}` cannot be pusehd down to `sum(bar)`, since this may change binary operation results.
-func PushdownBinaryOpFilters(e Expr, commonFilters []LabelFilter) (Expr, error) {
+func PushdownBinaryOpFilters(e Expr, commonFilters []LabelFilter) Expr {
 	if len(commonFilters) == 0 {
 		// Fast path - nothing to push down.
-		return e, nil
+		return e
 	}
-	eCopy, err := Clone(e)
-	if err != nil {
-		return nil, fmt.Errorf("cannot clone the expression %q: %w", e, err)
-	}
+	eCopy := Clone(e)
 	pushdownBinaryOpFiltersInplace(eCopy, commonFilters)
-	return eCopy, nil
+	return eCopy
 }
 
 func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {

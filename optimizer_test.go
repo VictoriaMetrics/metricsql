@@ -20,10 +20,7 @@ func TestPushdownBinaryOpFilters(t *testing.T) {
 		if !ok {
 			t.Fatalf("filters=%s must be a metrics expression; got %T", filters, filtersExpr)
 		}
-		resultExpr, err := PushdownBinaryOpFilters(e, me.LabelFilters)
-		if err != nil {
-			t.Fatalf("cannot push down binary op filters %s: %s", filters, err)
-		}
+		resultExpr := PushdownBinaryOpFilters(e, me.LabelFilters)
 		result := resultExpr.AppendString(nil)
 		if string(result) != resultExpected {
 			t.Fatalf("unexpected result for PushdownBinaryOpFilters(%s, %s);\ngot\n%s\nwant\n%s", q, filters, result, resultExpected)
@@ -114,10 +111,7 @@ func TestOptimize(t *testing.T) {
 			t.Fatalf("unexpected error in Parse(%s): %s", q, err)
 		}
 		sOrig := string(e.AppendString(nil))
-		eOptimized, err := Optimize(e)
-		if err != nil {
-			t.Fatalf("unexpected error in Optimize(%s): %s", q, err)
-		}
+		eOptimized := Optimize(e)
 		qOptimized := eOptimized.AppendString(nil)
 		if string(qOptimized) != qOptimizedExpected {
 			t.Fatalf("unexpected qOptimized;\ngot\n%s\nwant\n%s", qOptimized, qOptimizedExpected)

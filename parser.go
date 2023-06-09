@@ -356,6 +356,9 @@ func (p *parser) parseExpr() (Expr, error) {
 			return nil, err
 		}
 		if isBinaryOpBoolModifier(p.lex.Token) {
+			if p.lex.sTail == "()" {
+				return nil, fmt.Errorf("missing right side in the binary expression %q", be.Op)
+			}
 			if !IsBinaryOpCmp(be.Op) {
 				return nil, fmt.Errorf(`bool modifier cannot be applied to %q`, be.Op)
 			}
