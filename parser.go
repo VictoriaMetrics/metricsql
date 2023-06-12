@@ -356,9 +356,6 @@ func (p *parser) parseExpr() (Expr, error) {
 			return nil, err
 		}
 		if isBinaryOpBoolModifier(p.lex.Token) {
-			if p.lex.sTail == "()" {
-				return nil, fmt.Errorf("missing right side in the binary expression %q", be.Op)
-			}
 			if !IsBinaryOpCmp(be.Op) {
 				return nil, fmt.Errorf(`bool modifier cannot be applied to %q`, be.Op)
 			}
@@ -368,6 +365,11 @@ func (p *parser) parseExpr() (Expr, error) {
 			}
 		}
 		if isBinaryOpGroupModifier(p.lex.Token) {
+			// if our current token is group modifier and tail only contains parens
+			// then expression is missing write side, for example 1+on()
+			if p.lex.sTail == "()" {
+				return nil, fmt.Errorf("missing right side in the binary expression %q", be.Op)
+			}
 			if err := p.parseModifierExpr(&be.GroupModifier); err != nil {
 				return nil, err
 			}
