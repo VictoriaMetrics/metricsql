@@ -132,6 +132,11 @@ func removeParensExpr(e Expr) Expr {
 			args[i] = removeParensExpr(arg)
 		}
 		if len(*pe) == 1 {
+			// if our current token is group modifier and tail only contains parens
+			// then expression is missing write side, for example 1+on()
+			if fe, ok := args[0].(*FuncExpr); ok && (isBinaryOpGroupModifier(fe.Name) || isBinaryOpJoinModifier(fe.Name)) {
+				return *pe
+			}
 			return args[0]
 		}
 		// Treat parensExpr as a function with empty name, i.e. union()
@@ -365,11 +370,6 @@ func (p *parser) parseExpr() (Expr, error) {
 			}
 		}
 		if isBinaryOpGroupModifier(p.lex.Token) {
-			// if our current token is group modifier and tail only contains parens
-			// then expression is missing write side, for example 1+on()
-			if p.lex.sTail == "()" {
-				return nil, fmt.Errorf("missing right side in the binary expression %q", be.Op)
-			}
 			if err := p.parseModifierExpr(&be.GroupModifier); err != nil {
 				return nil, err
 			}

@@ -489,8 +489,11 @@ func TestParseSuccess(t *testing.T) {
 	another(`rate(x) + with (rate(a,b)=a*b) rate(2,b)`, `rate(x) + (2 * b)`)
 	another(`with (sum(a,b)=a+b) sum(c,d)`, `c + d`)
 	// binary operation with expression
-	another(`1+(on())`, `1 + on()`)
-	another(`1 + (ignoring())`, `1+ignoring()`)
+	same(`1 + (on())`)
+	same(`1 + (ignoring())`)
+	same(`1 + (ignoring())`)
+	same(`1 + (group_left())`)
+	same(`1 + (group_right())`)
 }
 
 func TestParseError(t *testing.T) {
