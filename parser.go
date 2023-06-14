@@ -132,8 +132,9 @@ func removeParensExpr(e Expr) Expr {
 			args[i] = removeParensExpr(arg)
 		}
 		if len(*pe) == 1 {
-			// if our current token is group modifier and tail only contains parens
-			// then expression is missing write side, for example 1+on()
+			// if FuncExpr contains a single expression which matches group modifier or join modifier
+			// it is required to keep parens in order to avoid parser recognizing those as MetricsQL keywords
+			// instead of function names for example: 1 + (on())
 			if fe, ok := args[0].(*FuncExpr); ok && (isBinaryOpGroupModifier(fe.Name) || isBinaryOpJoinModifier(fe.Name)) {
 				return *pe
 			}
