@@ -300,6 +300,13 @@ func TestParseSuccess(t *testing.T) {
 	same(`a / b keep_metric_names`)
 	same(`a / 1 keep_metric_names`)
 	same(`1 / a keep_metric_names`)
+	same(`a + b offset 5m @ 1235`)
+	another(`a + b @ 1235 offset 5m`, `a + b offset 5m @ 1235`)
+	same(`a + on (x) group_left (y) b offset 5m @ 1235 keep_metric_names`)
+	same(`(a + on (x) group_left (y) b offset 5m keep_metric_names) @ 1235`)
+	same(`(a + on (x) group_left (y) b keep_metric_names) offset 5m @ 1235`)
+	another(`(a + on (x) group_left (y) b keep_metric_names) @ 1235 offset 5m`, `(a + on (x) group_left (y) b keep_metric_names) offset 5m @ 1235`)
+	same(`rate(x) keep_metric_names + abs(y) keep_metric_names keep_metric_names`)
 
 	// parensExpr
 	another(`(-foo + ((bar) / (baz))) + ((23))`, `((0 - foo) + (bar / baz)) + 23`)

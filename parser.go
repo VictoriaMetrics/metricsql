@@ -382,13 +382,13 @@ func (p *parser) parseExpr() (Expr, error) {
 			return nil, err
 		}
 		be.Right = e2
-		e = balanceBinaryOp(&be)
 		if isKeepMetricNames(p.lex.Token) {
 			be.KeepMetricNames = true
 			if err := p.lex.Next(); err != nil {
 				return nil, err
 			}
 		}
+		e = balanceBinaryOp(&be)
 	}
 }
 
