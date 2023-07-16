@@ -488,6 +488,28 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (rate(a) = b) c`, `c`)
 	another(`rate(x) + with (rate(a,b)=a*b) rate(2,b)`, `rate(x) + (2 * b)`)
 	another(`with (sum(a,b)=a+b) sum(c,d)`, `c + d`)
+
+	same(`{foo="bar" | bar!~"buz"}`)
+	same(`{foo="bar" | bar!="buz" | buz=~"qux"}`)
+	same(`{foo="bar", bar="buz" | buz="qux"}`)
+	same(`{foo="bar", bar="buz" | foo=~"bar", buz="qux"}`)
+	same(`test{foo="bar" | bar="buz"}`)
+	same(`test{foo="bar" | bar="buz" | buz="qux"}`)
+	same(`test{foo="bar", bar="buz" | buz="qux"}`)
+	same(`test{foo="bar", bar="buz" | foo="bar", buz="qux"}`)
+	same(`{__name__="test", foo="bar", bar="buz" | foo="bar", buz="qux"}`)
+	same(`{foo="bar", bar="buz" | __name__="test", foo="bar", buz="qux"}`)
+	same(`sum({foo="bar" | bar="buz"}) by (foo, bar)`)
+	same(`sum({foo="bar" | bar="buz"}) + sum({buz="qux" | qux="foo"})`)
+	same(`{__name__="test", foo="bar" | __name__!="test", buz="qux"}`)
+	another(`{|}`, `{}`)
+	another(`{foo="bar" | }`, `{foo="bar"}`)
+	another(`{ | foo="bar"}`, `{foo="bar"}`)
+	another(`{foo="bar" | | bar="buz"}`, `{foo="bar" | bar="buz"}`)
+	another(`{__name__="test", foo="bar" | __name__="test", buz="qux"}`, `test{foo="bar" | buz="qux"}`)
+	another(`with(q={foo="bar"}) q{bar="buz" | buz="qux"}`, `{foo="bar", bar="buz" | foo="bar", buz="qux"}`)
+	another(`with(q={foo="bar"}) {q | bar="buz" | buz="qux"}`, `{foo="bar" | bar="buz" | buz="qux"}`)
+	another(`with(q=a{foo="bar"}) q{bar="buz" | buz="qux"}`, `a{foo="bar", bar="buz" | foo="bar", buz="qux"}`)
 }
 
 func TestParseError(t *testing.T) {
@@ -564,6 +586,9 @@ func TestParseError(t *testing.T) {
 	f(`m{x=y/5}`)
 	f(`m{x=y+5}`)
 	f(`m keep_metric_names`) // keep_metric_names cannot be used with metric expression
+	f(`foo | bar`)
+	f(`foo{|`)
+	f(`{} | {}`)
 
 	// Invalid @ modifier
 	f(`@`)
@@ -790,4 +815,6 @@ func TestParseError(t *testing.T) {
 	f(`with (f())`)
 	f(`with (sum(a,b)=a+b) sum(x)`)
 	f(`with (rate()=foobar) rate(x)`)
+	f(`with(q={foo="bar" | bar="buz"}) q()`)
+	f(`with(q=a{foo="bar" | bar="buz"}) q()`)
 }
