@@ -54,6 +54,10 @@ func TestPushdownBinaryOpFilters(t *testing.T) {
 	f(`scalar(foo)+bar`, `{a="b"}`, `scalar(foo) + bar{a="b"}`)
 	f(`vector(foo)`, `{a="b"}`, `vector(foo)`)
 	f(`{a="b"} + on() group_left() {c="d"}`, `{a="b"}`, `{a="b"} + on () group_left () {c="d"}`)
+
+	// pushdown for 'or' filters
+	f(`foo{a="b" or c="d" or x="y",q="w"}`, `{x="y"}`, `foo{a="b",x="y" or c="d",x="y" or q="w",x="y"}`)
+	f(`{a="b" or x="y",q="w"} + bar`, `{x="y"}`, `{a="b",x="y" or q="w",x="y"} + bar{x="y"}`)
 }
 
 func TestGetCommonLabelFilters(t *testing.T) {
@@ -109,6 +113,11 @@ func TestGetCommonLabelFilters(t *testing.T) {
 	f(`{a="b"} unLEss on(c) {c="d"}`, `{}`)
 	f(`{a="b"} unless on(a,c) {c="d"}`, `{a="b"}`)
 	f(`{a="b"} Unless on(x) {c="d"}`, `{}`)
+
+	// common filters for 'or' filters
+	f(`{a="b" or c="d",a="b"}`, `{a="b"}`)
+	f(`{a="b",c="d" or c="d",a="b"}`, `{c="d",a="b"}`)
+	f(`foo{x="y",a="b",c="d" or c="d",a="b"}`, `{c="d",a="b"}`)
 }
 
 func TestOptimize(t *testing.T) {
@@ -168,6 +177,7 @@ func TestOptimize(t *testing.T) {
 	f(`{a="b"} + ({c="d"} * on(c) group_right() {e="f"})`, `{a="b",c="d",e="f"} + ({c="d"} * on (c) group_right () {c="d",e="f"})`)
 	f(`{a="b"} + ({c="d"} * on(e) group_right() {e="f"})`, `{a="b",e="f"} + ({c="d",e="f"} * on (e) group_right () {e="f"})`)
 	f(`{a="b"} + ({c="d"} * on(x) group_right() {e="f"})`, `{a="b",e="f"} + ({c="d"} * on (x) group_right () {e="f"})`)
+	f(`{a="b" or c="d"} + ({c="d"} * on(x) group_right() {e="f"})`, `{a="b",e="f" or c="d",e="f"} + ({c="d"} * on (x) group_right () {e="f"})`)
 
 	// specially handled binary expressions
 	f(`foo{a="b"} or bar{x="y"}`, `foo{a="b"} or bar{x="y"}`)
