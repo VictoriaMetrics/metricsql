@@ -1185,6 +1185,9 @@ func (p *parser) parseLabelFilterss(mf *labelFilterExpr) ([][]*labelFilterExpr, 
 		if err := p.lex.Next(); err != nil {
 			return nil, err
 		}
+		if mf != nil {
+			return [][]*labelFilterExpr{{mf}}, nil
+		}
 		return nil, nil
 	}
 

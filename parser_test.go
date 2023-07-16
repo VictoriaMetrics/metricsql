@@ -52,6 +52,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`{foo="bar"}[5m] oFFSEt 10y`, `{foo="bar"}[5m] offset 10y`)
 	same("METRIC")
 	same("metric")
+	another("metric{}", "metric")
 	same("m_e:tri44:_c123")
 	another("-metric", "0 - metric")
 	same(`metric offset 10h`)
