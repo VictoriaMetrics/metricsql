@@ -10,22 +10,22 @@ func TestParseSuccess(t *testing.T) {
 
 		e, err := Parse(s)
 		if err != nil {
-			t.Fatalf("unexpected error when parsing %q: %s", s, err)
+			t.Fatalf("unexpected error when parsing %s: %s", s, err)
 		}
 		res := e.AppendString(nil)
 		if string(res) != sExpected {
-			t.Fatalf("unexpected string constructed;\ngot\n%q\nwant\n%q", res, sExpected)
+			t.Fatalf("unexpected string constructed;\ngot\n%s\nwant\n%s", res, sExpected)
 		}
 	}
 	same := func(s string) {
 		t.Helper()
 		another(s, s)
 	}
+
 	// metricExpr
 	same(`{}`)
 	same(`{}[5m]`)
 	same(`{}[5m:]`)
-	same(`{}[5M:]`)
 	same(`{}[:]`)
 	another(`{}[: ]`, `{}[:]`)
 	same(`{}[:3s]`)
@@ -34,7 +34,6 @@ func TestParseSuccess(t *testing.T) {
 	another(`{}[ 5m : 3s ]`, `{}[5m:3s]`)
 	same(`{} offset 5m`)
 	same(`{} offset -5m`)
-	same(`{} offset 5M`)
 	same(`{}[5m] offset 10y`)
 	same(`{}[5.3m:3.4s] offset 10y`)
 	same(`{}[:3.4s] offset 10y`)
@@ -53,6 +52,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`{foo="bar"}[5m] oFFSEt 10y`, `{foo="bar"}[5m] offset 10y`)
 	same("METRIC")
 	same("metric")
+	another("metric{}", "metric")
 	same("m_e:tri44:_c123")
 	another("-metric", "0 - metric")
 	same(`metric offset 10h`)
@@ -65,13 +65,21 @@ func TestParseSuccess(t *testing.T) {
 	same(`metric{foo="bar"} offset 10h`)
 	same(`metric{foo!="bar"}[2d]`)
 	same(`metric{foo="bar"}[2d] offset 10h`)
-	same(`metric{foo="bar", b="sdfsdf"}[2d:3h] offset 10h`)
-	same(`metric{foo="bar", b="sdfsdf"}[2d:3h] offset 10`)
-	same(`metric{foo="bar", b="sdfsdf"}[2d:3] offset 10h`)
-	same(`metric{foo="bar", b="sdfsdf"}[2:3h] offset 10h`)
-	same(`metric{foo="bar", b="sdfsdf"}[2.34:5.6] offset 3600.5`)
-	same(`metric{foo="bar", b="sdfsdf"}[234:56] offset -3600`)
+	same(`metric{foo="bar",b="sdfsdf"}[2d:3h] offset 10h`)
+	same(`metric{foo="bar",b="sdfsdf"}[2d:3h] offset 10`)
+	same(`metric{foo="bar",b="sdfsdf"}[2d:3] offset 10h`)
+	same(`metric{foo="bar",b="sdfsdf"}[2:3h] offset 10h`)
+	same(`metric{foo="bar",b="sdfsdf"}[2.34:5.6] offset 3600.5`)
+	same(`metric{foo="bar",b="sdfsdf"}[234:56] offset -3600`)
 	another(`  metric  {  foo  = "bar"  }  [  2d ]   offset   10h  `, `metric{foo="bar"}[2d] offset 10h`)
+
+	// metricExpr with 'or'
+	same(`metric{foo="bar" or baz="a"}`)
+	same(`metric{foo="bar",x="y" or baz="a",z="q" or a="b"}`)
+	same(`{foo="bar",x="y" or baz="a",z="q" or a="b"}`)
+	another(`metric{foo="bar" OR baz="a"}`, `metric{foo="bar" or baz="a"}`)
+	another(`{foo="bar" OR baz="a"}`, `{foo="bar" or baz="a"}`)
+
 	// @ modifier
 	// See https://prometheus.io/docs/prometheus/latest/querying/basics/#modifier
 	same(`foo @ 123.45`)
@@ -86,6 +94,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`time() @ (start())`, `time() @ start()`)
 	another(`time() @ (start()+(1+1))`, `time() @ (start() + 2)`)
 	same(`time() @ (end() - 10m)`)
+
 	// metric name matching keywords
 	same("rate")
 	same("RATE")
@@ -99,12 +108,15 @@ func TestParseSuccess(t *testing.T) {
 	same("with")
 	same("WITH")
 	same("With")
+	same("with / by")
 	same("offset")
 	same("keep_metric_names")
 	same("alias")
 	same(`alias{foo="bar"}`)
 	same(`aLIas{alias="aa"}`)
+	same("or")
 	another(`al\ias`, `alias`)
+
 	// identifiers with with escape chars
 	same(`foo\ bar`)
 	same(`foo\-bar\{{baz\+bar="aa"}`)
@@ -113,11 +125,14 @@ func TestParseSuccess(t *testing.T) {
 	another(`\温\度{\房\间="水电费"}[5m] offset 10m`, `温度{房间="水电费"}[5m] offset 10m`)
 	same(`sum(fo\|o) by (b\|a, x)`)
 	another(`sum(x) by (b\x7Ca)`, `sum(x) by (b\|a)`)
+
 	// Duplicate filters
 	same(`foo{__name__="bar"}`)
-	same(`foo{a="b", a="c", __name__="aaa", b="d"}`)
+	same(`foo{a="b",a="c",__name__="aaa",b="d"}`)
+
 	// Metric filters ending with comma
 	another(`m{foo="bar",}`, `m{foo="bar"}`)
+
 	// String concat in tag value
 	another(`m{foo="bar" + "baz"}`, `m{foo="barbaz"}`)
 
@@ -138,8 +153,11 @@ func TestParseSuccess(t *testing.T) {
 	another("``", `""`)
 	another("   `foo\"b'ar`  ", "\"foo\\\"b'ar\"")
 	another(`  'foo\'bar"BAZ'  `, `"foo'bar\"BAZ"`)
+
 	// string concat
 	another(`"foo"+'bar'`, `"foobar"`)
+	another(`("foo" + "bar")`, `"foobar"`)
+	another(`(("foo")+"bar")+"baz"`, `"foobarbaz"`)
 
 	// numberExpr
 	same(`1`)
@@ -248,7 +266,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`m1 + on (foo, bar,) group_right (x, y,) m2`, `m1 + on (foo, bar) group_right (x, y) m2`)
 	same(`m1 == bool on (foo, bar) group_right (x, y) m2`)
 	another(`5 - 1 + 3 * 2 ^ 2 ^ 3 - 2  OR Metric {Bar= "Baz", aaa!="bb",cc=~"dd" ,zz !~"ff" } `,
-		`770 or Metric{Bar="Baz", aaa!="bb", cc=~"dd", zz!~"ff"}`)
+		`770 or Metric{Bar="Baz",aaa!="bb",cc=~"dd",zz!~"ff"}`)
 	same(`"foo" + bar()`)
 	same(`"foo" + bar{x="y"}`)
 	same(`("foo"[3s] + bar{x="y"})[5m:3s] offset 10s`)
@@ -311,6 +329,7 @@ func TestParseSuccess(t *testing.T) {
 	same(`rate(foo[5m]) keep_metric_names`)
 	another(`log2(foo) KEEP_metric_names + 1 / increase(bar[5m]) keep_metric_names offset 1h @ 435`,
 		`log2(foo) keep_metric_names + (1 / increase(bar[5m]) keep_metric_names offset 1h @ 435)`)
+
 	// funcName matching keywords
 	same(`by(2)`)
 	same(`BY(2)`)
@@ -322,6 +341,7 @@ func TestParseSuccess(t *testing.T) {
 	same(`rate(rate(m[5m]))`)
 	same(`rate(rate(m[5m])[1h:])`)
 	same(`rate(rate(m[5m])[1h:3s])`)
+
 	// funcName with escape chars
 	same(`foo\(ba\-r()`)
 
@@ -369,7 +389,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (foo = bar, bar=baz + f()) test`, `test`)
 	another(`with (ct={job="test"}) a{ct} + ct() + f({ct="x"})`, `(a{job="test"} + {job="test"}) + f({ct="x"})`)
 	another(`with (ct={job="test", i="bar"}) ct + {ct, x="d"} + foo{ct, ct} + ctx(1)`,
-		`(({job="test", i="bar"} + {job="test", i="bar", x="d"}) + foo{job="test", i="bar"}) + ctx(1)`)
+		`(({job="test",i="bar"} + {job="test",i="bar",x="d"}) + foo{job="test",i="bar"}) + ctx(1)`)
 	another(`with (foo = bar) {__name__=~"foo"}`, `{__name__=~"foo"}`)
 	another(`with (foo = bar) foo{__name__="foo"}`, `bar`)
 	another(`with (foo = bar) {__name__="foo", x="y"}`, `bar{x="y"}`)
@@ -379,9 +399,19 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (foo\-bar(baz) = baz + baz) foo\-bar(x*y)`, `(x * y) + (x * y)`)
 	another(`with (foo\-bar(baz) = baz + baz) foo\-bar(x\*y)`, `x\*y + x\*y`)
 	another(`with (foo\-bar(b\ az) = b\ az + b\ az) foo\-bar(x\*y)`, `x\*y + x\*y`)
-	// override ttf to something new.
+
+	// withExpr and 'or' filters
+	another(`with (x={a="b"}) x{c="d" or q="w",r="t"}`, `{a="b",c="d" or a="b",q="w",r="t"}`)
+	another(`with (x={a="b"}) foo{x,bar="baz" or c="d",x}`, `foo{a="b",bar="baz" or c="d",a="b"}`)
+	another(`with (x={a="b"}) foo{x,bar="baz",x or c="d"}`, `foo{a="b",bar="baz" or c="d"}`)
+	another(`with (x={a="b"}) foo{bar="baz",x or c="d"}`, `foo{bar="baz",a="b" or c="d"}`)
+	another(`with (x={a="b",c="d"}) {bar="baz",x or x,c="d",x}`, `{bar="baz",a="b",c="d" or a="b",c="d"}`)
+	another(`with (x={a="b" or c="d"}) x / x{e="f"}`, `{a="b" or c="d"} / {a="b",e="f" or c="d",e="f"}`)
+
+	// override ttf with something new
 	another(`with (ttf = a) ttf + b`, `a + b`)
-	// override ttf to ru
+
+	// override ttf with ru
 	another(`with (ttf = ru(m, n)) ttf`, `(clamp_min(n - clamp_min(m, 0), 0) / clamp_min(n, 0)) * 100`)
 
 	// Verify withExpr recursion and forward reference
@@ -398,20 +428,20 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (f(a,f,x)=ff(x,f,a)) f(f(x,y,z),1,2)`, `ff(2, 1, ff(z, y, x))`)
 	another(`with (f(x)=1+f(x)) f(foo{bar="baz"})`, `1 + f(foo{bar="baz"})`)
 	another(`with (a=foo, y=bar, f(a)= a+a+y) f(x)`, `(x + x) + bar`)
-	another(`with (f(a, b) = m{a, b}) f({a="x", b="y"}, {c="d"})`, `m{a="x", b="y", c="d"}`)
-	another(`with (xx={a="x"}, f(a, b) = m{a, b}) f({xx, b="y"}, {c="d"})`, `m{a="x", b="y", c="d"}`)
+	another(`with (f(a, b) = m{a, b}) f({a="x", b="y"}, {c="d"})`, `m{a="x",b="y",c="d"}`)
+	another(`with (xx={a="x"}, f(a, b) = m{a, b}) f({xx, b="y"}, {c="d"})`, `m{a="x",b="y",c="d"}`)
 	another(`with (x() = {b="c"}) foo{x}`, `foo{b="c"}`)
 	another(`with (f(x)=x{foo="bar"} offset 5m) f(m offset 10m)`, `(m{foo="bar"} offset 10m) offset 5m`)
-	another(`with (f(x)=x{foo="bar",bas="a"}[5m]) f(m[10m] offset 3s)`, `(m{foo="bar", bas="a"}[10m] offset 3s)[5m]`)
-	another(`with (f(x)=x{foo="bar"}[5m] offset 10m) f(m{x="y"})`, `m{x="y", foo="bar"}[5m] offset 10m`)
-	another(`with (f(x)=x{foo="bar"}[5m] offset 10m) f({x="y", foo="bar", foo="bar"})`, `{x="y", foo="bar"}[5m] offset 10m`)
+	another(`with (f(x)=x{foo="bar",bas="a"}[5m]) f(m[10m] offset 3s)`, `(m{foo="bar",bas="a"}[10m] offset 3s)[5m]`)
+	another(`with (f(x)=x{foo="bar"}[5m] offset 10m) f(m{x="y"})`, `m{x="y",foo="bar"}[5m] offset 10m`)
+	another(`with (f(x)=x{foo="bar"}[5m] offset 10m) f({x="y", foo="bar", foo="bar"})`, `{x="y",foo="bar"}[5m] offset 10m`)
 	another(`with (f(m, x)=m{x}[5m] offset 10m) f(foo, {})`, `foo[5m] offset 10m`)
 	another(`with (f(m, x)=m{x, bar="baz"}[5m] offset 10m) f(foo, {})`, `foo{bar="baz"}[5m] offset 10m`)
 	another(`with (f(x)=x[5m] offset 3s) f(foo[3m]+bar)`, `(foo[3m] + bar)[5m] offset 3s`)
 	another(`with (f(x)=x[5m:3s] oFFsEt 1.5m) f(sum(s) by (a,b))`, `(sum(s) by (a, b))[5m:3s] offset 1.5m`)
 	another(`with (x="a", y=x) y+"bc"`, `"abc"`)
 	another(`with (x="a", y="b"+x) "we"+y+"z"+f()`, `"webaz" + f()`)
-	another(`with (f(x) = m{foo=x+"y", bar="y"+x, baz=x} + x) f("qwe")`, `m{foo="qwey", bar="yqwe", baz="qwe"} + "qwe"`)
+	another(`with (f(x) = m{foo=x+"y", bar="y"+x, baz=x} + x) f("qwe")`, `m{foo="qwey",bar="yqwe",baz="qwe"} + "qwe"`)
 	another(`with (f(a)=a) f`, `f`)
 	another(`with (f\q(a)=a) f\q`, `fq`)
 
@@ -441,7 +471,7 @@ func TestParseSuccess(t *testing.T) {
 			)
 			z(foo) / f(x)
 	)
-	f(a)`, `(a + (foo * m{foo="bar", y="1"})) / f(a)`)
+	f(a)`, `(a + (foo * m{foo="bar",y="1"})) / f(a)`)
 
 	// complex withExpr
 	another(`WITH (
@@ -453,7 +483,7 @@ func TestParseSuccess(t *testing.T) {
 		hitRatio = sumByInstance(hits) / sumByInstance(hits + miss)
 	)
 	hitRatio < treshold`,
-		`(sum(rate(cache{type="hit", job="cacher", instance=~"1.2.3.4"}[5m])) by (instance) / sum(rate(cache{type="hit", job="cacher", instance=~"1.2.3.4"}[5m]) + rate(cache{type="miss", job="cacher", instance=~"1.2.3.4"}[5m])) by (instance)) < 0.9`)
+		`(sum(rate(cache{type="hit",job="cacher",instance=~"1.2.3.4"}[5m])) by (instance) / sum(rate(cache{type="hit",job="cacher",instance=~"1.2.3.4"}[5m]) + rate(cache{type="miss",job="cacher",instance=~"1.2.3.4"}[5m])) by (instance)) < 0.9`)
 	another(`WITH (
 		x2(x) = x^2,
 		f(x, y) = x2(x) + x*y + x2(y)
@@ -478,7 +508,7 @@ func TestParseSuccess(t *testing.T) {
 	       hitRate(hits, misses) = sumRate(hits, commonFilters) / (sumRate(hits, commonFilters) + sumRate(misses, commonFilters))
 	   )
 	   hitRate(cacheHits, cacheMisses)`,
-		`sum(rate(cacheHits{job="foo", instance="bar"})) by (job, instance) / (sum(rate(cacheHits{job="foo", instance="bar"})) by (job, instance) + sum(rate(cacheMisses{job="foo", instance="bar"})) by (job, instance))`)
+		`sum(rate(cacheHits{job="foo",instance="bar"})) by (job, instance) / (sum(rate(cacheHits{job="foo",instance="bar"})) by (job, instance) + sum(rate(cacheMisses{job="foo",instance="bar"})) by (job, instance))`)
 	another(`with(y=123,z=5) union(with(y=3,f(x)=x*y) f(2) + f(3), with(x=5,y=2) x*y*z)`, `union(15, 50)`)
 
 	another(`with(sum=123,now=5) union(with(sum=3,f(x)=x*sum) f(2) + f(3), with(x=5,sum=2) x*sum*now)`, `union(15, 50)`)
@@ -513,6 +543,7 @@ func TestParseError(t *testing.T) {
 	f("  \t\b\r\n  ")
 
 	// invalid metricExpr
+	f(`{}[5M:]`)
 	f(`foo[-55]`)
 	f(`m[-5m]`)
 	f(`{`)
@@ -567,7 +598,22 @@ func TestParseError(t *testing.T) {
 	f(`m{x=y}`)
 	f(`m{x=y/5}`)
 	f(`m{x=y+5}`)
-	f(`m keep_metric_names`) // keep_metric_names cannot be used with metric expression
+
+	// invalid 'or' filters
+	f(`{or`)
+	f(`a{or`)
+	f(`{or x}`)
+	f(`{or x="y"}`)
+	f(`{x or}`)
+	f(`{x or,`)
+	f(`{x or,}`)
+	f(`{x="y" or`)
+	f(`{x="y" or}`)
+	f(`{x="y" or z`)
+	f(`{x="y" or z="x"`)
+
+	// keep_metric_names cannot be used with metric expression
+	f(`m keep_metric_names`)
 
 	// Invalid @ modifier
 	f(`@`)
@@ -653,6 +699,7 @@ func TestParseError(t *testing.T) {
 	f(`foo or bool bar`)
 	f(`foo == bool $$`)
 	f(`"foo" + bar`)
+	f(`(foo + `)
 
 	// invalid parensExpr
 	f(`(`)
@@ -794,4 +841,11 @@ func TestParseError(t *testing.T) {
 	f(`with (f())`)
 	f(`with (sum(a,b)=a+b) sum(x)`)
 	f(`with (rate()=foobar) rate(x)`)
+	f(`with (x={y}) x`)
+
+	// invalid withExpr with 'or' filter
+	f(`with (x={a="b" or c="d"}) {x}`)
+	f(`with (x={a="b" or c="d"}) x{d="e" or z="c"}`)
+	f(`with (x={a="b" or c="d"}) {x,d="e"}`)
+	f(`with (x={a="b" or c="d"}) {x,d="e" or z="c"}`)
 }

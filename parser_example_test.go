@@ -24,7 +24,7 @@ func ExampleParse() {
 	fmt.Printf("rollup: expr=%s, window=%s\n", re.Expr.AppendString(nil), re.Window.AppendString(nil))
 
 	me := re.Expr.(*metricsql.MetricExpr)
-	fmt.Printf("metric: labelFilter1=%s, labelFilter2=%s", me.LabelFilters[0].AppendString(nil), me.LabelFilters[1].AppendString(nil))
+	fmt.Printf("metric: labelFilter1=%s, labelFilter2=%s", me.LabelFilterss[0][0].AppendString(nil), me.LabelFilterss[0][1].AppendString(nil))
 
 	// Output:
 	// parsed expr: sum(rate(foo{bar="baz"}[5m])) by (x, y)
