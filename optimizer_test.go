@@ -133,7 +133,7 @@ func TestOptimize(t *testing.T) {
 		if string(qOptimized) != qOptimizedExpected {
 			t.Fatalf("unexpected qOptimized;\ngot\n%s\nwant\n%s", qOptimized, qOptimizedExpected)
 		}
-		// Make sure the the orginal e didn't change after Optimize() call
+		// Make sure the original e didn't change after Optimize() call
 		s := string(e.AppendString(nil))
 		if s != sOrig {
 			t.Fatalf("the original expression has been changed;\ngot\n%s\nwant\n%s", s, sOrig)

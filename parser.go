@@ -132,6 +132,12 @@ func removeParensExpr(e Expr) Expr {
 			args[i] = removeParensExpr(arg)
 		}
 		if len(*pe) == 1 {
+			// if FuncExpr contains a single expression which matches group modifier or join modifier
+			// it is required to keep parens in order to avoid parser recognizing those as MetricsQL keywords
+			// instead of function names for example: 1 + (on())
+			if fe, ok := args[0].(*FuncExpr); ok && (isBinaryOpGroupModifier(fe.Name) || isBinaryOpJoinModifier(fe.Name)) {
+				return *pe
+			}
 			return args[0]
 		}
 		// Treat parensExpr as a function with empty name, i.e. union()
