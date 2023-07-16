@@ -926,7 +926,9 @@ func expandModifierArgs(was []*withArgExpr, args []string) ([]string, error) {
 func expandWithExprExt(was []*withArgExpr, wa *withArgExpr, args []Expr) (Expr, error) {
 	if len(wa.Args) != len(args) {
 		if args == nil {
-			// Just return MetricExpr with the wa.Name name.
+			// This case is possible if metric name clashes with one of the WITH template name.
+			//
+			// In this case just return MetricExpr with the wa.Name name.
 			return newMetricExpr(wa.Name), nil
 		}
 		return nil, fmt.Errorf("invalid number of args for %q; got %d; want %d", wa.Name, len(args), len(wa.Args))
