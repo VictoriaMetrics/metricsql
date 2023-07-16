@@ -24,5 +24,5 @@ func ExampleExpandWithExprs() {
 	fmt.Printf("%s\n", pql)
 
 	// Output:
-	// 100 * (disk_free_bytes{job="$job", instance="$instance"} / disk_total_bytes{job="$job", instance="$instance"})
+	// 100 * (disk_free_bytes{job="$job",instance="$instance"} / disk_total_bytes{job="$job",instance="$instance"})
 }
