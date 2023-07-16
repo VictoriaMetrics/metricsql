@@ -60,7 +60,7 @@ func TestVisitAll(t *testing.T) {
 	}
 	f("123", "123,")
 	f("1+2", "3,")
-	f("1+a", "1,a, (), (),1 + a,")
-	f("f(a<b+1, sum(x) by (y))", "a,b,1, (), (),b + 1, (), (),a < (b + 1),x,by (y),sum(x) by (y),f(a < (b + 1), sum(x) by (y)),")
+	f("1+a", "1,a,(),(),1 + a,")
+	f("f(a<b+1, sum(x) by (y))", "a,b,1,(),(),b + 1,(),(),a < (b + 1),x,by(y),sum(x) by(y),f(a < (b + 1), sum(x) by(y)),")
 	f("x[1s]", "x,x[1s],")
 }

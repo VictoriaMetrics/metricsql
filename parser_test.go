@@ -123,8 +123,8 @@ func TestParseSuccess(t *testing.T) {
 	another(`\x2E\x2ef\oo{b\xEF\ar="aa"}`, `\..foo{bïar="aa"}`)
 	same(`温度{房间="水电费"}[5m] offset 10m`)
 	another(`\温\度{\房\间="水电费"}[5m] offset 10m`, `温度{房间="水电费"}[5m] offset 10m`)
-	same(`sum(fo\|o) by (b\|a, x)`)
-	another(`sum(x) by (b\x7Ca)`, `sum(x) by (b\|a)`)
+	same(`sum(fo\|o) by(b\|a,x)`)
+	another(`sum(x) by (b\x7Ca)`, `sum(x) by(b\|a)`)
 
 	// Duplicate filters
 	same(`foo{__name__="bar"}`)
@@ -236,11 +236,11 @@ func TestParseSuccess(t *testing.T) {
 	another(`1/0`, `+Inf`)
 	another(`0/0`, `NaN`)
 	another(`-m`, `0 - m`)
-	same(`m + ignoring () n[5m]`)
-	another(`M + IGNORING () N[5m]`, `M + ignoring () N[5m]`)
-	same(`m + on (foo) n[5m]`)
-	another(`m + ON (Foo) n[5m]`, `m + on (Foo) n[5m]`)
-	same(`m + ignoring (a, b) n[5m]`)
+	same(`m + ignoring() n[5m]`)
+	another(`M + IGNORING () N[5m]`, `M + ignoring() N[5m]`)
+	same(`m + on(foo) n[5m]`)
+	another(`m + ON (Foo) n[5m]`, `m + on(Foo) n[5m]`)
+	same(`m + ignoring(a,b) n[5m]`)
 	another(`1 or 2`, `1`)
 	another(`1 and 2`, `1`)
 	another(`1 unless 2`, `NaN`)
@@ -259,12 +259,12 @@ func TestParseSuccess(t *testing.T) {
 	another(`512.5 - (1 + 3) * (2 ^ 2) ^ 3`, `256.5`)
 	another(`1 == bool 1 != bool 24 < bool 4 > bool -1`, `1`)
 	another(`1 == bOOl 1 != BOOL 24 < Bool 4 > booL -1`, `1`)
-	another(`m1+on(foo)group_left m2`, `m1 + on (foo) group_left () m2`)
-	another(`M1+ON(FOO)GROUP_left M2`, `M1 + on (FOO) group_left () M2`)
-	same(`m1 + on (foo) group_right () m2`)
-	same(`m1 + on (foo, bar) group_right (x, y) m2`)
-	another(`m1 + on (foo, bar,) group_right (x, y,) m2`, `m1 + on (foo, bar) group_right (x, y) m2`)
-	same(`m1 == bool on (foo, bar) group_right (x, y) m2`)
+	another(`m1+on(foo)group_left m2`, `m1 + on(foo) group_left() m2`)
+	another(`M1+ON(FOO)GROUP_left M2`, `M1 + on(FOO) group_left() M2`)
+	same(`m1 + on(foo) group_right() m2`)
+	same(`m1 + on(foo,bar) group_right(x,y) m2`)
+	another(`m1 + on (foo, bar,) group_right (x, y,) m2`, `m1 + on(foo,bar) group_right(x,y) m2`)
+	same(`m1 ==bool on(foo,bar) group_right(x,y) m2`)
 	another(`5 - 1 + 3 * 2 ^ 2 ^ 3 - 2  OR Metric {Bar= "Baz", aaa!="bb",cc=~"dd" ,zz !~"ff" } `,
 		`770 or Metric{Bar="Baz",aaa!="bb",cc=~"dd",zz!~"ff"}`)
 	same(`"foo" + bar()`)
@@ -302,11 +302,23 @@ func TestParseSuccess(t *testing.T) {
 	same(`1 / a keep_metric_names`)
 	same(`a + b offset 5m @ 1235`)
 	another(`a + b @ 1235 offset 5m`, `a + b offset 5m @ 1235`)
-	same(`a + on (x) group_left (y) b offset 5m @ 1235 keep_metric_names`)
-	same(`(a + on (x) group_left (y) b offset 5m keep_metric_names) @ 1235`)
-	same(`(a + on (x) group_left (y) b keep_metric_names) offset 5m @ 1235`)
-	another(`(a + on (x) group_left (y) b keep_metric_names) @ 1235 offset 5m`, `(a + on (x) group_left (y) b keep_metric_names) offset 5m @ 1235`)
-	same(`rate(x) keep_metric_names + abs(y) keep_metric_names keep_metric_names`)
+	same(`a + on(x) group_left(y) b offset 5m @ 1235 keep_metric_names`)
+	same(`(a + on(x) group_left(y) b offset 5m keep_metric_names) @ 1235`)
+	same(`(a + on(x) group_left(y) b keep_metric_names) offset 5m @ 1235`)
+	another(`(a + on (x) group_left (y) b keep_metric_names) @ 1235 offset 5m`, `(a + on(x) group_left(y) b keep_metric_names) offset 5m @ 1235`)
+	same(`rate(x) keep_metric_names + (abs(y) keep_metric_names) keep_metric_names`)
+
+	// binaryOp with reserved names
+	same(`a + (on)`)
+	same(`a + (on + c)`)
+	same(`a + (GROUP_LEFT)`)
+	same(`a + (bool)`)
+	same(`a + (bool(1, 2))`)
+	same(`without + (ignoring{x="y"})`)
+	another(`a + (GROUP_LEFT) / b`, `a + (GROUP_LEFT / b)`)
+	same(`by + without`)
+	same(`group_left / (on(1, 2))`)
+	another(`group_left / (f(1, 2))`, `group_left / f(1, 2)`)
 
 	// parensExpr
 	another(`(-foo + ((bar) / (baz))) + ((23))`, `((0 - foo) + (bar / baz)) + 23`)
@@ -353,30 +365,30 @@ func TestParseSuccess(t *testing.T) {
 	same(`foo\(ba\-r()`)
 
 	// aggrFuncExpr
-	same(`sum(http_server_request) by ()`)
-	same(`sum(http_server_request) by (job)`)
-	same(`sum(http_server_request) without (job, foo)`)
-	another(`sum(x,y,) without (a,b,)`, `sum(x, y) without (a, b)`)
-	another(`sum by () (xx)`, `sum(xx) by ()`)
-	another(`sum by (s) (xx)[5s]`, `(sum(xx) by (s))[5s]`)
-	another(`SUM BY (ZZ, aa) (XX)`, `sum(XX) by (ZZ, aa)`)
-	another(`sum without (a, b) (xx,2+2)`, `sum(xx, 4) without (a, b)`)
-	another(`Sum WIthout (a, B) (XX,2+2)`, `sum(XX, 4) without (a, B)`)
+	same(`sum(http_server_request) by()`)
+	same(`sum(http_server_request) by(job)`)
+	same(`sum(http_server_request) without(job,foo)`)
+	another(`sum(x,y,) without (a,b,)`, `sum(x, y) without(a,b)`)
+	another(`sum by () (xx)`, `sum(xx) by()`)
+	another(`sum by (s) (xx)[5s]`, `(sum(xx) by(s))[5s]`)
+	another(`SUM BY (ZZ, aa) (XX)`, `sum(XX) by(ZZ,aa)`)
+	another(`sum without (a, b) (xx,2+2)`, `sum(xx, 4) without(a,b)`)
+	another(`Sum WIthout (a, B) (XX,2+2)`, `sum(XX, 4) without(a,B)`)
 	same(`sum(a) or sum(b)`)
-	same(`sum(a) by () or sum(b) without (x, y)`)
+	same(`sum(a) by() or sum(b) without(x,y)`)
 	same(`sum(a) + sum(b)`)
 	same(`sum(x) * (1 + sum(a))`)
 	same(`avg(x) limit 10`)
-	same(`avg(x) without (z, b) limit 1`)
-	another(`avg by(x) (z) limit 20`, `avg(z) by (x) limit 20`)
+	same(`avg(x) without(z,b) limit 1`)
+	another(`avg by(x) (z) limit 20`, `avg(z) by(x) limit 20`)
 
 	// All the above
 	another(`Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) * F2("Test")`,
-		`sum((Ff(M) * M{X=""}[5m] offset 7m) - 123, 35) by (X, y) * F2("Test")`)
+		`sum((Ff(M) * M{X=""}[5m] offset 7m) - 123, 35) by(X,y) * F2("Test")`)
 	another(`# comment
 		Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) # yet another comment
 		* F2("Test")`,
-		`sum((Ff(M) * M{X=""}[5m] offset 7m) - 123, 35) by (X, y) * F2("Test")`)
+		`sum((Ff(M) * M{X=""}[5m] offset 7m) - 123, 35) by(X,y) * F2("Test")`)
 
 	// withExpr
 	another(`with () x`, `x`)
@@ -431,7 +443,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (x(foo) = foo+1) x(a)`, `a + 1`)
 	another(`with (x(a, b) = a + b) x(foo, bar)`, `foo + bar`)
 	another(`with (x(a, b) = a + b) x(foo, x(1, 2))`, `foo + 3`)
-	another(`with (x(a) = sum(a) by (b)) x(xx) / x(y)`, `sum(xx) by (b) / sum(y) by (b)`)
+	another(`with (x(a) = sum(a) by (b)) x(xx) / x(y)`, `sum(xx) by(b) / sum(y) by(b)`)
 	another(`with (f(a,f,x)=ff(x,f,a)) f(f(x,y,z),1,2)`, `ff(2, 1, ff(z, y, x))`)
 	another(`with (f(x)=1+f(x)) f(foo{bar="baz"})`, `1 + f(foo{bar="baz"})`)
 	another(`with (a=foo, y=bar, f(a)= a+a+y) f(x)`, `(x + x) + bar`)
@@ -445,7 +457,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (f(m, x)=m{x}[5m] offset 10m) f(foo, {})`, `foo[5m] offset 10m`)
 	another(`with (f(m, x)=m{x, bar="baz"}[5m] offset 10m) f(foo, {})`, `foo{bar="baz"}[5m] offset 10m`)
 	another(`with (f(x)=x[5m] offset 3s) f(foo[3m]+bar)`, `(foo[3m] + bar)[5m] offset 3s`)
-	another(`with (f(x)=x[5m:3s] oFFsEt 1.5m) f(sum(s) by (a,b))`, `(sum(s) by (a, b))[5m:3s] offset 1.5m`)
+	another(`with (f(x)=x[5m:3s] oFFsEt 1.5m) f(sum(s) by (a,b))`, `(sum(s) by(a,b))[5m:3s] offset 1.5m`)
 	another(`with (x="a", y=x) y+"bc"`, `"abc"`)
 	another(`with (x="a", y="b"+x) "we"+y+"z"+f()`, `"webaz" + f()`)
 	another(`with (f(x) = m{foo=x+"y", bar="y"+x, baz=x} + x) f("qwe")`, `m{foo="qwey",bar="yqwe",baz="qwe"} + "qwe"`)
@@ -453,16 +465,16 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (f\q(a)=a) f\q`, `fq`)
 
 	// Verify withExpr for aggr func modifiers
-	another(`with (f(x) = x, y = sum(m) by (f)) y`, `sum(m) by (f)`)
-	another(`with (f(x) = x, y = sum(m) by (f) limit 20) y`, `sum(m) by (f) limit 20`)
-	another(`with (f(x) = sum(m) by (x)) f(foo)`, `sum(m) by (foo)`)
-	another(`with (f(x) = sum(m) by (x) limit 42) f(foo)`, `sum(m) by (foo) limit 42`)
-	another(`with (f(x) = sum(m) by (x)) f((foo, bar, foo))`, `sum(m) by (foo, bar)`)
-	another(`with (f(x) = sum(m) without (x,y)) f((a, b))`, `sum(m) without (a, b, y)`)
-	another(`with (f(x) = sum(m) without (y,x)) f((a, y))`, `sum(m) without (y, a)`)
-	another(`with (f(x,y) = a + on (x,y) group_left (y,bar) b) f(foo,())`, `a + on (foo) group_left (bar) b`)
-	another(`with (f(x,y) = a + on (x,y) group_left (y,bar) b) f((foo),())`, `a + on (foo) group_left (bar) b`)
-	another(`with (f(x,y) = a + on (x,y) group_left (y,bar) b) f((foo,xx),())`, `a + on (foo, xx) group_left (bar) b`)
+	another(`with (f(x) = x, y = sum(m) by (f)) y`, `sum(m) by(f)`)
+	another(`with (f(x) = x, y = sum(m) by (f) limit 20) y`, `sum(m) by(f) limit 20`)
+	another(`with (f(x) = sum(m) by (x)) f(foo)`, `sum(m) by(foo)`)
+	another(`with (f(x) = sum(m) by (x) limit 42) f(foo)`, `sum(m) by(foo) limit 42`)
+	another(`with (f(x) = sum(m) by (x)) f((foo, bar, foo))`, `sum(m) by(foo,bar)`)
+	another(`with (f(x) = sum(m) without (x,y)) f((a, b))`, `sum(m) without(a,b,y)`)
+	another(`with (f(x) = sum(m) without (y,x)) f((a, y))`, `sum(m) without(y,a)`)
+	another(`with (f(x,y) = a + on (x,y) group_left (y,bar) b) f(foo,())`, `a + on(foo) group_left(bar) b`)
+	another(`with (f(x,y) = a + on (x,y) group_left (y,bar) b) f((foo),())`, `a + on(foo) group_left(bar) b`)
+	another(`with (f(x,y) = a + on (x,y) group_left (y,bar) b) f((foo,xx),())`, `a + on(foo,xx) group_left(bar) b`)
 
 	// Verify nested with exprs
 	another(`with (f(x) = (with(x=y) x) + x) f(z)`, `y + z`)
@@ -490,7 +502,7 @@ func TestParseSuccess(t *testing.T) {
 		hitRatio = sumByInstance(hits) / sumByInstance(hits + miss)
 	)
 	hitRatio < treshold`,
-		`(sum(rate(cache{type="hit",job="cacher",instance=~"1.2.3.4"}[5m])) by (instance) / sum(rate(cache{type="hit",job="cacher",instance=~"1.2.3.4"}[5m]) + rate(cache{type="miss",job="cacher",instance=~"1.2.3.4"}[5m])) by (instance)) < 0.9`)
+		`(sum(rate(cache{type="hit",job="cacher",instance=~"1.2.3.4"}[5m])) by(instance) / sum(rate(cache{type="hit",job="cacher",instance=~"1.2.3.4"}[5m]) + rate(cache{type="miss",job="cacher",instance=~"1.2.3.4"}[5m])) by(instance)) < 0.9`)
 	another(`WITH (
 		x2(x) = x^2,
 		f(x, y) = x2(x) + x*y + x2(y)
@@ -515,7 +527,7 @@ func TestParseSuccess(t *testing.T) {
 	       hitRate(hits, misses) = sumRate(hits, commonFilters) / (sumRate(hits, commonFilters) + sumRate(misses, commonFilters))
 	   )
 	   hitRate(cacheHits, cacheMisses)`,
-		`sum(rate(cacheHits{job="foo",instance="bar"})) by (job, instance) / (sum(rate(cacheHits{job="foo",instance="bar"})) by (job, instance) + sum(rate(cacheMisses{job="foo",instance="bar"})) by (job, instance))`)
+		`sum(rate(cacheHits{job="foo",instance="bar"})) by(job,instance) / (sum(rate(cacheHits{job="foo",instance="bar"})) by(job,instance) + sum(rate(cacheMisses{job="foo",instance="bar"})) by(job,instance))`)
 	another(`with(y=123,z=5) union(with(y=3,f(x)=x*y) f(2) + f(3), with(x=5,y=2) x*y*z)`, `union(15, 50)`)
 
 	another(`with(sum=123,now=5) union(with(sum=3,f(x)=x*sum) f(2) + f(3), with(x=5,sum=2) x*sum*now)`, `union(15, 50)`)
@@ -530,12 +542,6 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (rate(a) = b) c`, `c`)
 	another(`rate(x) + with (rate(a,b)=a*b) rate(2,b)`, `rate(x) + (2 * b)`)
 	another(`with (sum(a,b)=a+b) sum(c,d)`, `c + d`)
-	// binary operation with expression
-	same(`1 + (on())`)
-	same(`1 + (ignoring())`)
-	same(`1 + (ignoring())`)
-	same(`1 + (group_left())`)
-	same(`1 + (group_right())`)
 }
 
 func TestParseError(t *testing.T) {
@@ -714,10 +720,6 @@ func TestParseError(t *testing.T) {
 	f(`"foo" + bar`)
 	f(`(foo + `)
 
-	// binary operation with expression where right side is missing
-	f(`1+on()`)
-	f(`1 + ignoring()`)
-
 	// invalid parensExpr
 	f(`(`)
 	f(`($`)
@@ -858,8 +860,8 @@ func TestParseError(t *testing.T) {
 	f(`with (f())`)
 	f(`with (sum(a,b)=a+b) sum(x)`)
 	f(`with (rate()=foobar) rate(x)`)
-  f(`with (x={y}) x`)
-  
+	f(`with (x={y}) x`)
+
 	// invalid withExpr with 'or' filter
 	f(`with (x={a="b" or c="d"}) {x}`)
 	f(`with (x={a="b" or c="d"}) x{d="e" or z="c"}`)

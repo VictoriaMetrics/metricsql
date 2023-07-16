@@ -132,12 +132,6 @@ func removeParensExpr(e Expr) Expr {
 			args[i] = removeParensExpr(arg)
 		}
 		if len(*pe) == 1 {
-			// if FuncExpr contains a single expression which matches group modifier or join modifier
-			// it is required to keep parens in order to avoid parser recognizing those as MetricsQL keywords
-			// instead of function names for example: 1 + (on())
-			if fe, ok := args[0].(*FuncExpr); ok && (isBinaryOpGroupModifier(fe.Name) || isBinaryOpJoinModifier(fe.Name)) {
-				return *pe
-			}
 			return args[0]
 		}
 		// Treat parensExpr as a function with empty name, i.e. union()
@@ -1639,16 +1633,14 @@ type BinaryOpExpr struct {
 // AppendString appends string representation of be to dst and returns the result.
 func (be *BinaryOpExpr) AppendString(dst []byte) []byte {
 	if _, ok := be.Left.(*BinaryOpExpr); ok {
-		dst = append(dst, '(')
-		dst = be.Left.AppendString(dst)
-		dst = append(dst, ')')
+		dst = appendArgInParens(dst, be.Left)
 	} else {
 		dst = be.Left.AppendString(dst)
 	}
 	dst = append(dst, ' ')
 	dst = append(dst, be.Op...)
 	if be.Bool {
-		dst = append(dst, " bool"...)
+		dst = append(dst, "bool"...)
 	}
 	if be.GroupModifier.Op != "" {
 		dst = append(dst, ' ')
@@ -1659,16 +1651,48 @@ func (be *BinaryOpExpr) AppendString(dst []byte) []byte {
 		dst = be.JoinModifier.AppendString(dst)
 	}
 	dst = append(dst, ' ')
-	if _, ok := be.Right.(*BinaryOpExpr); ok {
-		dst = append(dst, '(')
-		dst = be.Right.AppendString(dst)
-		dst = append(dst, ')')
+	if be.needRightParens() {
+		dst = appendArgInParens(dst, be.Right)
 	} else {
 		dst = be.Right.AppendString(dst)
 	}
 	if be.KeepMetricNames {
 		dst = append(dst, " keep_metric_names"...)
 	}
+	return dst
+}
+
+func (be *BinaryOpExpr) needRightParens() bool {
+	r := be.Right
+	if _, ok := r.(*BinaryOpExpr); ok {
+		return true
+	}
+	if me, ok := r.(*MetricExpr); ok {
+		metricName := me.getMetricName()
+		return isReservedBinaryOpIdent(metricName)
+	}
+	if fe, ok := r.(*FuncExpr); ok && isReservedBinaryOpIdent(fe.Name) {
+		return true
+	}
+	if !be.KeepMetricNames {
+		return false
+	}
+	switch r.(type) {
+	case *FuncExpr:
+		return true
+	default:
+		return false
+	}
+}
+
+func isReservedBinaryOpIdent(s string) bool {
+	return isBinaryOpGroupModifier(s) || isBinaryOpJoinModifier(s) || isBinaryOpBoolModifier(s)
+}
+
+func appendArgInParens(dst []byte, arg Expr) []byte {
+	dst = append(dst, '(')
+	dst = arg.AppendString(dst)
+	dst = append(dst, ')')
 	return dst
 }
 
@@ -1684,11 +1708,11 @@ type ModifierExpr struct {
 // AppendString appends string representation of me to dst and returns the result.
 func (me *ModifierExpr) AppendString(dst []byte) []byte {
 	dst = append(dst, me.Op...)
-	dst = append(dst, " ("...)
+	dst = append(dst, "("...)
 	for i, arg := range me.Args {
 		dst = appendEscapedIdent(dst, arg)
 		if i+1 < len(me.Args) {
-			dst = append(dst, ", "...)
+			dst = append(dst, ',')
 		}
 	}
 	dst = append(dst, ')')
