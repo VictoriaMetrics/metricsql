@@ -89,11 +89,13 @@ func TestParseSuccess(t *testing.T) {
 	same(`foo{bar="baz"}[5m] @ 12345`)
 	same(`foo{bar="baz"}[5m:4s] offset 5m @ (end() - 3.5m)`)
 	another(`foo{bar="baz"}[5m:4s] @ (end() - 3.5m) offset 2.4h`, `foo{bar="baz"}[5m:4s] offset 2.4h @ (end() - 3.5m)`)
-	another(`foo @ start() + (bar offset 3m @ end()) / baz OFFSET -5m`, `foo @ start() + (bar offset 3m @ end() / baz offset -5m)`)
-	same(`sum(foo) @ start() + rate(bar @ (end() - 5m))`)
+	another(`foo @ start() + (bar offset 3m @ end()) / baz OFFSET -5m`, `(foo @ start()) + ((bar offset 3m @ end()) / (baz offset -5m))`)
+	another(`sum(foo) @ start() + rate(bar @ (end() - 5m))`, `(sum(foo) @ start()) + rate(bar @ (end() - 5m))`)
 	another(`time() @ (start())`, `time() @ start()`)
 	another(`time() @ (start()+(1+1))`, `time() @ (start() + 2)`)
 	same(`time() @ (end() - 10m)`)
+	another(`a + b offset 5m @ 1235`, `a + (b offset 5m @ 1235)`)
+	another(`a + b @ 1235 offset 5m`, `a + (b offset 5m @ 1235)`)
 
 	// metric name matching keywords
 	same("rate")
@@ -271,8 +273,8 @@ func TestParseSuccess(t *testing.T) {
 	same(`"foo" + bar{x="y"}`)
 	same(`("foo"[3s] + bar{x="y"})[5m:3s] offset 10s`)
 	same(`("foo"[3s] + bar{x="y"})[5i:3i] offset 10i`)
-	same(`bar + "foo" offset 3s`)
-	same(`bar + "foo" offset 3i`)
+	another(`bar + "foo" offset 3s`, `bar + ("foo" offset 3s)`)
+	another(`bar + "foo" offset 3i`, `bar + ("foo" offset 3i)`)
 	another(`1+2 if 2>3`, `NaN`)
 	another(`1+4 if 2<3`, `5`)
 	another(`2+6 default 3 if 2>3`, `8`)
@@ -297,16 +299,14 @@ func TestParseSuccess(t *testing.T) {
 	another(`"a">=bool"b"`, `0`)
 	another(`"a"<="b"`, `1`)
 	same(`"a" - "b"`)
-	same(`a / b keep_metric_names`)
-	same(`a / 1 keep_metric_names`)
-	same(`1 / a keep_metric_names`)
-	same(`a + b offset 5m @ 1235`)
-	another(`a + b @ 1235 offset 5m`, `a + b offset 5m @ 1235`)
-	same(`a + on(x) group_left(y) b offset 5m @ 1235 keep_metric_names`)
-	same(`(a + on(x) group_left(y) b offset 5m keep_metric_names) @ 1235`)
-	same(`(a + on(x) group_left(y) b keep_metric_names) offset 5m @ 1235`)
-	another(`(a + on (x) group_left (y) b keep_metric_names) @ 1235 offset 5m`, `(a + on(x) group_left(y) b keep_metric_names) offset 5m @ 1235`)
-	same(`rate(x) keep_metric_names + (abs(y) keep_metric_names) keep_metric_names`)
+	another(`x / a keep_metric_names`, `(x / a) keep_metric_names`)
+	same(`(a + b) keep_metric_names`)
+	another(`((a) + (b)) keep_metric_names`, `(a + b) keep_metric_names`)
+	another(`a + on(x) group_left(y) b offset 5m @ 1235 keep_metric_names`, `(a + on(x) group_left(y) (b offset 5m @ 1235)) keep_metric_names`)
+	another(`(a + on(x) group_left(y) b offset 5m keep_metric_names) @ 1235`, `((a + on(x) group_left(y) (b offset 5m)) keep_metric_names) @ 1235`)
+	another(`(a + on(x) group_left(y) b keep_metric_names) offset 5m @ 1235`, `((a + on(x) group_left(y) b) keep_metric_names) offset 5m @ 1235`)
+	another(`(a + on (x) group_left (y) b keep_metric_names) @ 1235 offset 5m`, `((a + on(x) group_left(y) b) keep_metric_names) offset 5m @ 1235`)
+	another(`rate(x) keep_metric_names + (abs(y) keep_metric_names) keep_metric_names`, `(rate(x) keep_metric_names + (abs(y) keep_metric_names)) keep_metric_names`)
 
 	// binaryOp with reserved names
 	same(`a + (on)`)
@@ -347,7 +347,7 @@ func TestParseSuccess(t *testing.T) {
 	another(` FOO (bar) + f  (  m  (  ),ff(1 + (  2.5)) ,M[5m ]  , "ff"  )`, `FOO(bar) + f(m(), ff(3.5), M[5m], "ff")`)
 	same(`rate(foo[5m]) keep_metric_names`)
 	another(`log2(foo) KEEP_metric_names + 1 / increase(bar[5m]) keep_metric_names offset 1h @ 435`,
-		`log2(foo) keep_metric_names + (1 / increase(bar[5m]) keep_metric_names offset 1h @ 435)`)
+		`log2(foo) keep_metric_names + (1 / (increase(bar[5m]) keep_metric_names offset 1h @ 435))`)
 
 	// funcName matching keywords
 	same(`by(2)`)
@@ -384,17 +384,17 @@ func TestParseSuccess(t *testing.T) {
 
 	// All the above
 	another(`Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) * F2("Test")`,
-		`sum((Ff(M) * M{X=""}[5m] offset 7m) - 123, 35) by(X,y) * F2("Test")`)
+		`sum((Ff(M) * (M{X=""}[5m] offset 7m)) - 123, 35) by(X,y) * F2("Test")`)
 	another(`# comment
 		Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) # yet another comment
 		* F2("Test")`,
-		`sum((Ff(M) * M{X=""}[5m] offset 7m) - 123, 35) by(X,y) * F2("Test")`)
+		`sum((Ff(M) * (M{X=""}[5m] offset 7m)) - 123, 35) by(X,y) * F2("Test")`)
 
 	// withExpr
 	another(`with () x`, `x`)
 	another(`with (x=1,) x`, `1`)
-	another(`with (x = m offset 5h) x + x`, `m offset 5h + m offset 5h`)
-	another(`with (x = m offset 5i) x + x`, `m offset 5i + m offset 5i`)
+	another(`with (x = m offset 5h) x + x`, `(m offset 5h) + (m offset 5h)`)
+	another(`with (x = m offset 5i) x + x`, `(m offset 5i) + (m offset 5i)`)
 	another(`with (foo = bar{x="x"}) 1`, `1`)
 	another(`with (foo = bar{x="x"}) "x"`, `"x"`)
 	another(`with (f="x") f`, `"x"`)

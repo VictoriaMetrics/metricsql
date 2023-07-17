@@ -259,7 +259,7 @@ func TestOptimize(t *testing.T) {
 	f(`quantiles_over_time("quantile", 0.1, 0.9, foo{x="y"}[5m] offset 4h) + bar{a!="b"}`, `quantiles_over_time("quantile", 0.1, 0.9, foo{a!="b",x="y"}[5m] offset 4h) + bar{a!="b",x="y"}`)
 
 	// @ modifier
-	f(`foo @ end() + bar{baz="a"}`, `foo{baz="a"} @ end() + bar{baz="a"}`)
+	f(`foo @ end() + bar{baz="a"}`, `(foo{baz="a"} @ end()) + bar{baz="a"}`)
 	f(`sum(foo @ end()) + bar{baz="a"}`, `sum(foo @ end()) + bar{baz="a"}`)
 	f(`foo @ (bar{a="b"} + baz{x="y"})`, `foo @ (bar{a="b",x="y"} + baz{a="b",x="y"})`)
 
