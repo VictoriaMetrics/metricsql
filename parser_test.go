@@ -267,6 +267,12 @@ func TestParseSuccess(t *testing.T) {
 	same(`m1 + on(foo,bar) group_right(x,y) m2`)
 	another(`m1 + on (foo, bar,) group_right (x, y,) m2`, `m1 + on(foo,bar) group_right(x,y) m2`)
 	same(`m1 ==bool on(foo,bar) group_right(x,y) m2`)
+	same(`a + on() group_left(*) b`)
+	same(`a + on() group_right(*) b`)
+	same(`a + on() group_left(*) prefix "foo" b`)
+	another(`a + oN() gROUp_rigHt(*) PREfix "bar" b`, `a + on() group_right(*) prefix "bar" b`)
+	same(`a + on(a) group_left(x,y) prefix "foo" b`)
+	same(`a + on(a,b) group_right(z) prefix "bar" b`)
 	another(`5 - 1 + 3 * 2 ^ 2 ^ 3 - 2  OR Metric {Bar= "Baz", aaa!="bb",cc=~"dd" ,zz !~"ff" } `,
 		`770 or Metric{Bar="Baz",aaa!="bb",cc=~"dd",zz!~"ff"}`)
 	same(`"foo" + bar()`)
@@ -475,6 +481,12 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (f(x,y) = a + on (x,y) group_left (y,bar) b) f(foo,())`, `a + on(foo) group_left(bar) b`)
 	another(`with (f(x,y) = a + on (x,y) group_left (y,bar) b) f((foo),())`, `a + on(foo) group_left(bar) b`)
 	another(`with (f(x,y) = a + on (x,y) group_left (y,bar) b) f((foo,xx),())`, `a + on(foo,xx) group_left(bar) b`)
+
+	// withExpr for group_left() / group_right() prefix
+	another(`with (f(x) = a+on() group_left() prefix x b) f("foo")`, `a + on() group_left() prefix "foo" b`)
+	another(`with (f(x) = a+on() group_left() prefix x+"bar" b) f("foo")`, `a + on() group_left() prefix "foobar" b`)
+	another(`with (f(x) = a+on() group_left() prefix "bar"+x b) f("foo")`, `a + on() group_left() prefix "barfoo" b`)
+	another(`with (f(x,y) = a+on() group_left() prefix y+x b) f("foo","bar")`, `a + on() group_left() prefix "barfoo" b`)
 
 	// Verify nested with exprs
 	another(`with (f(x) = (with(x=y) x) + x) f(z)`, `y + z`)
@@ -719,6 +731,10 @@ func TestParseError(t *testing.T) {
 	f(`foo == bool $$`)
 	f(`"foo" + bar`)
 	f(`(foo + `)
+	f(`a + on(*) b`)                 // star cannot be used inside on()
+	f(`a + ignoring(*) b`)           // star cannot be used inside ignoring()
+	f(`a + on() group_left(*,x) b`)  // star cannot be mixed with other labels inside group_left()
+	f(`a + on() group_right(x,*) b`) // star cannot be mixed with other labels inside group_right()
 
 	// invalid parensExpr
 	f(`(`)
@@ -799,6 +815,8 @@ func TestParseError(t *testing.T) {
 	f(`sum by (x) (y) by (z)`)
 	f(`sum(m) by (1)`)
 	f(`sum(m) keep_metric_names`) // keep_metric_names cannot be used for aggregate functions
+	f(`sum(m) by(*)`)             // star cannot be used in by()
+	f(`sum(m) without(*)`)        // star cannot be used in without()
 
 	// invalid withExpr
 	f(`with $`)
