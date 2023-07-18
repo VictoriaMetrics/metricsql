@@ -183,6 +183,9 @@ func TestOptimize(t *testing.T) {
 	f(`{a="b"} + ({c="d"} * on(e) group_right() {e="f"})`, `{a="b",e="f"} + ({c="d",e="f"} * on(e) group_right() {e="f"})`)
 	f(`{a="b"} + ({c="d"} * on(x) group_right() {e="f"})`, `{a="b",e="f"} + ({c="d"} * on(x) group_right() {e="f"})`)
 	f(`{a="b" or c="d"} + ({c="d"} * on(x) group_right() {e="f"})`, `{a="b",e="f" or c="d",e="f"} + ({c="d"} * on(x) group_right() {e="f"})`)
+	f(`a + on(x) group_left(*) (prefix{x="a"})`, `a{x="a"} + on(x) group_left(*) (prefix{x="a"})`)
+	f(`a + on(x) group_right(*) prefix "foo_" b{x="a"}`, `a{x="a"} + on(x) group_right(*) prefix "foo_" b{x="a"}`)
+	f(`a{x="a"} + on(x) group_right(*) prefix "foo_" prefix`, `a{x="a"} + on(x) group_right(*) prefix "foo_" (prefix{x="a"})`)
 
 	// specially handled binary expressions
 	f(`foo{a="b"} or bar{x="y"}`, `foo{a="b"} or bar{x="y"}`)
