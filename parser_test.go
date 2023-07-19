@@ -317,6 +317,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`(a + on(x) group_left(y) b keep_metric_names) offset 5m @ 1235`, `((a + on(x) group_left(y) b) keep_metric_names) offset 5m @ 1235`)
 	another(`(a + on (x) group_left (y) b keep_metric_names) @ 1235 offset 5m`, `((a + on(x) group_left(y) b) keep_metric_names) offset 5m @ 1235`)
 	another(`rate(x) keep_metric_names + (abs(y) keep_metric_names) keep_metric_names`, `(rate(x) keep_metric_names + (abs(y) keep_metric_names)) keep_metric_names`)
+	same(`a + (rate(b) keep_metric_names)`)
 
 	// binaryOp with reserved names
 	same(`a + (on)`)
