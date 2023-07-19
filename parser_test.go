@@ -430,6 +430,14 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (foo\-bar(baz) = baz + baz) foo\-bar(x\*y)`, `x\*y + x\*y`)
 	another(`with (foo\-bar(b\ az) = b\ az + b\ az) foo\-bar(x\*y)`, `x\*y + x\*y`)
 
+	// withExpr and durations
+	another(`with (w=5m) w + m[w] offset w`, `5m + (m[5m] offset 5m)`)
+	another(`with (f() = 5m + rate(m{x="a"}[5m:1h] offset 1h)) f()`, `5m + rate(m{x="a"}[5m:1h] offset 1h)`)
+	another(`with (f(w1, w2) = w1 + rate(m{x="a"}[w1:w2] offset w2)) f(5m, 1h)`, `5m + rate(m{x="a"}[5m:1h] offset 1h)`)
+	another(`with (f(w) = m[w], f2(x) = f(x) / x) f2(5m)`, `m[5m] / 5m`)
+	another(`with (f(w) = m[w:w], f2(x) = f(x) / x) f2(5i)`, `m[5i:5i] / 5i`)
+	another(`with (f(w,w1) = m[w:w1], f2(x) = f(x, 23.34) / x) f2(123.456)`, `m[123.456:23.34] / 123.456`)
+
 	// withExpr and 'or' filters
 	another(`with (x={a="b"}) x{c="d" or q="w",r="t"}`, `{a="b",c="d" or a="b",q="w",r="t"}`)
 	another(`with (x={a="b"}) foo{x,bar="baz" or c="d",x}`, `foo{a="b",bar="baz" or c="d",a="b"}`)
@@ -437,6 +445,12 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (x={a="b"}) foo{bar="baz",x or c="d"}`, `foo{bar="baz",a="b" or c="d"}`)
 	another(`with (x={a="b",c="d"}) {bar="baz",x or x,c="d",x}`, `{bar="baz",a="b",c="d" or a="b",c="d"}`)
 	another(`with (x={a="b" or c="d"}) x / x{e="f"}`, `{a="b" or c="d"} / {a="b",e="f" or c="d",e="f"}`)
+
+	// withExpr and group_left()/group_right() prefix
+	another(`with (f(x)=a + on() group_left(a,b) prefix x b) f("bar")`, `a + on() group_left(a,b) prefix "bar" b`)
+	another(`with (f(x)=a + on() group_left(a,b) prefix x+"foo" b) f("bar")`, `a + on() group_left(a,b) prefix "barfoo" b`)
+	another(`with (f(x)=a + on() group_left(a,b) prefix "foo"+x b) f("bar")`, `a + on() group_left(a,b) prefix "foobar" b`)
+	another(`with (f(x)=a + on() group_left(a,b) prefix "foo"+x+"baz" b) f("bar")`, `a + on() group_left(a,b) prefix "foobarbaz" b`)
 
 	// override ttf with something new
 	another(`with (ttf = a) ttf + b`, `a + b`)
