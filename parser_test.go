@@ -164,6 +164,8 @@ func TestParseSuccess(t *testing.T) {
 	// numberExpr
 	same(`1`)
 	same(`123.`)
+	same(`1_234`)
+	same(`1_2_34.56_78_9`)
 	another(`-123.`, `-123`)
 	same(`foo - 123.`)
 	same(`12.e+4`)

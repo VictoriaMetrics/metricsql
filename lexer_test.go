@@ -75,6 +75,11 @@ func TestScanPositiveNumberSuccess(t *testing.T) {
 	f("2.3tb", "2.3tb")
 	f("3tI", "3tI")
 	f("4.5TIB   ", "4.5TIB")
+
+	// number with underscores - see https://github.com/golang/go/issues/28493
+	f("1_2_334", "1_2_334")
+	f("1_2.3_34_5", "1_2.3_34_5")
+	f("1_2.3_34_5e8", "1_2.3_34_5e8")
 }
 
 func TestScanPositiveNumberFailure(t *testing.T) {
