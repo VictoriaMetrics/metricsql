@@ -22,7 +22,7 @@ func TestParseSuccess(t *testing.T) {
 		another(s, s)
 	}
 
-	// // metricExpr
+	// metricExpr
 	same(`{}`)
 	same(`{}[5m]`)
 	same(`{}[5m:]`)
@@ -365,9 +365,6 @@ func TestParseSuccess(t *testing.T) {
 	same(`rate(rate(m[5m]))`)
 	same(`rate(rate(m[5m])[1h:])`)
 	same(`rate(rate(m[5m])[1h:3s])`)
-
-	// funcName with escape chars
-	//	same(`foo\(ba\-r()`)
 
 	// aggrFuncExpr
 	same(`sum(http_server_request) by()`)
@@ -812,7 +809,9 @@ func TestParseError(t *testing.T) {
 	f(`# comment
 		Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) # yet another comment
 		* F2("Test")`)
-	f(`with (ct={job="test"}) a{ct} + ct() + f({ct="x"})`)
+
+	// funcName with escape chars
+	f(`foo\(ba\-r()`)
 
 	// invalid aggrFuncExpr
 	f(`sum(`)
@@ -929,6 +928,7 @@ func TestParseError(t *testing.T) {
 	f(`with (f(a,f,x)=ff(x,f,a)) f(f(x,y,z),1,2)`)
 	f(`with (x="a", y="b"+x) "we"+y+"z"+f()`)
 	f(`with (x=foo) f(a, with (y=x) y)`)
+	f(`with (ct={job="test"}) a{ct} + ct() + f({ct="x"})`)
 
 	// invalid withExpr with 'or' filter
 	f(`with (x={a="b" or c="d"}) {x}`)
