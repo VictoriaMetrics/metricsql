@@ -65,12 +65,10 @@ func isSupportedFunction(e Expr) bool {
 				isSupported = false
 				return
 			}
-			if len(v.Args) > 0 {
-				for _, arg := range v.Args {
-					if !isSupportedFunction(arg) {
-						isSupported = false
-						return
-					}
+			for _, arg := range v.Args {
+				if !isSupportedFunction(arg) {
+					isSupported = false
+					return
 				}
 			}
 		case *AggrFuncExpr:
@@ -78,12 +76,10 @@ func isSupportedFunction(e Expr) bool {
 				isSupported = false
 				return
 			}
-			if len(v.Args) > 0 {
-				for _, arg := range v.Args {
-					if !isSupportedFunction(arg) {
-						isSupported = false
-						return
-					}
+			for _, arg := range v.Args {
+				if !isSupportedFunction(arg) {
+					isSupported = false
+					return
 				}
 			}
 		}
