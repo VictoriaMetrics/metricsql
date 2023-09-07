@@ -22,7 +22,7 @@ func TestParseSuccess(t *testing.T) {
 		another(s, s)
 	}
 
-	// metricExpr
+	// // metricExpr
 	same(`{}`)
 	same(`{}[5m]`)
 	same(`{}[5m:]`)
@@ -216,7 +216,7 @@ func TestParseSuccess(t *testing.T) {
 	same(`0.34h4m5s`)
 	same(`0.34H4m5S`)
 	another(`-0.34h4m5s`, `0 - 0.34h4m5s`)
-	same(`sum_over_tme(m[1h]) / 1h`)
+	same(`sum_over_time(m[1h]) / 1h`)
 	same(`sum_over_time(m[3600]) / 3600`)
 
 	// binaryOpExpr
@@ -279,7 +279,7 @@ func TestParseSuccess(t *testing.T) {
 	same(`a + on(a,b) group_right(z) prefix "bar" b`)
 	another(`5 - 1 + 3 * 2 ^ 2 ^ 3 - 2  OR Metric {Bar= "Baz", aaa!="bb",cc=~"dd" ,zz !~"ff" } `,
 		`770 or Metric{Bar="Baz",aaa!="bb",cc=~"dd",zz!~"ff"}`)
-	same(`"foo" + bar()`)
+
 	same(`"foo" + bar{x="y"}`)
 	same(`("foo"[3s] + bar{x="y"})[5m:3s] offset 10s`)
 	same(`("foo"[3s] + bar{x="y"})[5i:3i] offset 10i`)
@@ -324,12 +324,11 @@ func TestParseSuccess(t *testing.T) {
 	same(`a + (on + c)`)
 	same(`a + (GROUP_LEFT)`)
 	same(`a + (bool)`)
-	same(`a + (bool(1, 2))`)
+	another(`a + (sum(1, 2))`, `a + sum(1, 2)`)
 	same(`without + (ignoring{x="y"})`)
 	another(`a + (GROUP_LEFT) / b`, `a + (GROUP_LEFT / b)`)
 	same(`by + without`)
-	same(`group_left / (on(1, 2))`)
-	another(`group_left / (f(1, 2))`, `group_left / f(1, 2)`)
+	another(`group_left / (sum(1, 2))`, `group_left / sum(1, 2)`)
 
 	// parensExpr
 	another(`(-foo + ((bar) / (baz))) + ((23))`, `((0 - foo) + (bar / baz)) + 23`)
@@ -338,42 +337,37 @@ func TestParseSuccess(t *testing.T) {
 	another(`((foo, bar),(baz))`, `((foo, bar), baz)`)
 	same(`(foo, (bar, baz), ((x, y), (z, y), xx))`)
 	another(`1+(foo, bar,)`, `1 + (foo, bar)`)
-	another(`((foo(bar,baz)), (1+(2)+(3,4)+()))`, `(foo(bar, baz), (3 + (3, 4)) + ())`)
+	another(`((avg(bar,baz)), (1+(2)+(3,4)+()))`, `(avg(bar, baz), (3 + (3, 4)) + ())`)
 	same(`()`)
 
 	// funcExpr
-	same(`f()`)
-	another(`f(x,)`, `f(x)`)
-	another(`-f()-Ff()`, `(0 - f()) - Ff()`)
-	same(`F()`)
-	another(`+F()`, `F()`)
-	another(`++F()`, `F()`)
-	another(`--F()`, `0 - (0 - F())`)
-	same(`f(http_server_request)`)
-	same(`f(http_server_request)[4s:5m] offset 10m`)
-	same(`f(http_server_request)[4i:5i] offset 10i`)
-	same(`F(HttpServerRequest)`)
-	same(`f(job, foo)`)
-	same(`F(Job, Foo)`)
-	another(` FOO (bar) + f  (  m  (  ),ff(1 + (  2.5)) ,M[5m ]  , "ff"  )`, `FOO(bar) + f(m(), ff(3.5), M[5m], "ff")`)
+	same(`sum()`)
+	another(`sum(x,)`, `sum(x)`)
+	another(`-sum()-AVG_over_time()`, `(0 - sum()) - AVG_over_time()`)
+	another(`SUM()`, `sum()`)
+	another(`+SUM()`, `sum()`)
+	another(`++SUM()`, `sum()`)
+	another(`--SUM()`, `0 - (0 - sum())`)
+	same(`rate(http_server_request)`)
+	same(`rate(http_server_request)[4s:5m] offset 10m`)
+	same(`rate(http_server_request)[4i:5i] offset 10i`)
+	another(`SUM(HttpServerRequest)`, `sum(HttpServerRequest)`)
+	same(`outliersk(job, foo)`)
+	same(`outliersk(Job, Foo)`)
+
+	another(` SUM (bar) + rate  (  avg  (  ),sum(1 + (  2.5)) ,M[5m ]  , "ff"  )`, `sum(bar) + rate(avg(), sum(3.5), M[5m], "ff")`)
 	same(`rate(foo[5m]) keep_metric_names`)
 	another(`log2(foo) KEEP_metric_names + 1 / increase(bar[5m]) keep_metric_names offset 1h @ 435`,
 		`log2(foo) keep_metric_names + (1 / (increase(bar[5m]) keep_metric_names offset 1h @ 435))`)
 
 	// funcName matching keywords
-	same(`by(2)`)
-	same(`BY(2)`)
-	same(`or(2)`)
-	same(`OR(2)`)
-	same(`bool(2)`)
-	same(`BOOL(2)`)
 	same(`rate(rate(m))`)
 	same(`rate(rate(m[5m]))`)
 	same(`rate(rate(m[5m])[1h:])`)
 	same(`rate(rate(m[5m])[1h:3s])`)
 
 	// funcName with escape chars
-	same(`foo\(ba\-r()`)
+	//	same(`foo\(ba\-r()`)
 
 	// aggrFuncExpr
 	same(`sum(http_server_request) by()`)
@@ -394,12 +388,12 @@ func TestParseSuccess(t *testing.T) {
 	another(`avg by(x) (z) limit 20`, `avg(z) by(x) limit 20`)
 
 	// All the above
-	another(`Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) * F2("Test")`,
-		`sum((Ff(M) * (M{X=""}[5m] offset 7m)) - 123, 35) by(X,y) * F2("Test")`)
+	another(`Sum(timestamp(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) * LAG("Test")`,
+		`sum((timestamp(M) * (M{X=""}[5m] offset 7m)) - 123, 35) by(X,y) * LAG("Test")`)
 	another(`# comment
-		Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) # yet another comment
-		* F2("Test")`,
-		`sum((Ff(M) * (M{X=""}[5m] offset 7m)) - 123, 35) by(X,y) * F2("Test")`)
+		Sum(Timestamp(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) # yet another comment
+		* LAG("Test")`,
+		`sum((Timestamp(M) * (M{X=""}[5m] offset 7m)) - 123, 35) by(X,y) * LAG("Test")`)
 
 	// withExpr
 	another(`with () x`, `x`)
@@ -411,15 +405,15 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (f="x") f`, `"x"`)
 	another(`with (foo = bar{x="x"}) x{x="y"}`, `x{x="y"}`)
 	another(`with (foo = bar{x="x"}) 1+1`, `2`)
-	another(`with (foo = bar{x="x"}) f()`, `f()`)
+	//	another(`with (foo = bar{x="x"}) f()`, `f()`)
 	another(`with (foo = bar{x="x"}) sum(x)`, `sum(x)`)
 	another(`with (foo = bar{x="x"}) baz{foo="bar"}`, `baz{foo="bar"}`)
 	another(`with (foo = bar) baz`, `baz`)
 	another(`with (foo = bar) foo + foo{a="b"}`, `bar + bar{a="b"}`)
 	another(`with (foo = bar, bar=baz + f()) test`, `test`)
-	another(`with (ct={job="test"}) a{ct} + ct() + f({ct="x"})`, `(a{job="test"} + {job="test"}) + f({ct="x"})`)
-	another(`with (ct={job="test", i="bar"}) ct + {ct, x="d"} + foo{ct, ct} + ctx(1)`,
-		`(({job="test",i="bar"} + {job="test",i="bar",x="d"}) + foo{job="test",i="bar"}) + ctx(1)`)
+	another(`with (ct={job="test"}) a{ct} + ct() + ceil({ct="x"})`, `(a{job="test"} + {job="test"}) + ceil({ct="x"})`)
+	another(`with (ct={job="test", i="bar"}) ct + {ct, x="d"} + foo{ct, ct} + count(1)`,
+		`(({job="test",i="bar"} + {job="test",i="bar",x="d"}) + foo{job="test",i="bar"}) + count(1)`)
 	another(`with (foo = bar) {__name__=~"foo"}`, `{__name__=~"foo"}`)
 	another(`with (foo = bar) foo{__name__="foo"}`, `bar`)
 	another(`with (foo = bar) {__name__="foo", x="y"}`, `bar{x="y"}`)
@@ -460,8 +454,8 @@ func TestParseSuccess(t *testing.T) {
 
 	// Verify withExpr recursion and forward reference
 	another(`with (x = x+y, y = x+x) y ^ 2`, `((x + y) + (x + y)) ^ 2`)
-	another(`with (f1(x)=f2(x), f2(x)=f1(x)^2) f1(foobar)`, `f2(foobar)`)
-	another(`with (f1(x)=f2(x), f2(x)=f1(x)^2) f2(foobar)`, `f2(foobar) ^ 2`)
+	//	another(`with (f1(x)=f2(x), f2(x)=f1(x)^2) f1(foobar)`, `f2(foobar)`)
+	//	another(`with (f1(x)=f2(x), f2(x)=f1(x)^2) f2(foobar)`, `f2(foobar) ^ 2`)
 
 	// Verify withExpr funcs
 	another(`with (x() = y+1) x`, `y + 1`)
@@ -469,8 +463,8 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (x(a, b) = a + b) x(foo, bar)`, `foo + bar`)
 	another(`with (x(a, b) = a + b) x(foo, x(1, 2))`, `foo + 3`)
 	another(`with (x(a) = sum(a) by (b)) x(xx) / x(y)`, `sum(xx) by(b) / sum(y) by(b)`)
-	another(`with (f(a,f,x)=ff(x,f,a)) f(f(x,y,z),1,2)`, `ff(2, 1, ff(z, y, x))`)
-	another(`with (f(x)=1+f(x)) f(foo{bar="baz"})`, `1 + f(foo{bar="baz"})`)
+	another(`with (f(a,f,x)=clamp(x,f,a)) f(f(x,y,z),1,2)`, `clamp(2, 1, clamp(z, y, x))`)
+	another(`with (f(x)=1+sum(x)) f(foo{bar="baz"})`, `1 + sum(foo{bar="baz"})`)
 	another(`with (a=foo, y=bar, f(a)= a+a+y) f(x)`, `(x + x) + bar`)
 	another(`with (f(a, b) = m{a, b}) f({a="x", b="y"}, {c="d"})`, `m{a="x",b="y",c="d"}`)
 	another(`with (xx={a="x"}, f(a, b) = m{a, b}) f({xx, b="y"}, {c="d"})`, `m{a="x",b="y",c="d"}`)
@@ -484,7 +478,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (f(x)=x[5m] offset 3s) f(foo[3m]+bar)`, `(foo[3m] + bar)[5m] offset 3s`)
 	another(`with (f(x)=x[5m:3s] oFFsEt 1.5m) f(sum(s) by (a,b))`, `(sum(s) by(a,b))[5m:3s] offset 1.5m`)
 	another(`with (x="a", y=x) y+"bc"`, `"abc"`)
-	another(`with (x="a", y="b"+x) "we"+y+"z"+f()`, `"webaz" + f()`)
+	another(`with (x="a", y="b"+x) "we"+y+"z"+count()`, `"webaz" + count()`)
 	another(`with (f(x) = m{foo=x+"y", bar="y"+x, baz=x} + x) f("qwe")`, `m{foo="qwey",bar="yqwe",baz="qwe"} + "qwe"`)
 	another(`with (f(a)=a) f`, `f`)
 	another(`with (f\q(a)=a) f\q`, `fq`)
@@ -509,7 +503,7 @@ func TestParseSuccess(t *testing.T) {
 
 	// Verify nested with exprs
 	another(`with (f(x) = (with(x=y) x) + x) f(z)`, `y + z`)
-	another(`with (x=foo) f(a, with (y=x) y)`, `f(a, foo)`)
+	another(`with (x=foo) clamp_min(a, with (y=x) y)`, `clamp_min(a, foo)`)
 	another(`with (x=foo) a * x + (with (y=x) y) / y`, `(a * foo) + (foo / y)`)
 	another(`with (x = with (y = foo) y + x) x/x`, `(foo + x) / (foo + x)`)
 	another(`with (
@@ -519,9 +513,9 @@ func TestParseSuccess(t *testing.T) {
 			with (
 				z(y) = x + y * q
 			)
-			z(foo) / f(x)
+			z(foo) / changes(x)
 	)
-	f(a)`, `(a + (foo * m{foo="bar",y="1"})) / f(a)`)
+	f(a)`, `(a + (foo * m{foo="bar",y="1"})) / changes(a)`)
 
 	// complex withExpr
 	another(`WITH (
@@ -789,6 +783,36 @@ func TestParseError(t *testing.T) {
 	f(`f bar (x)`)
 	f(`keep_metric_names f()`)
 	f(`f() abc`)
+	f(`f()`)
+	f(`f(x,)`)
+	f(`-f()-Ff()`)
+	f(`F()`)
+	f(`+F()`)
+	f(`++F()`)
+	f(`--F()`)
+	f(`f(http_server_request)`)
+	f(`f(http_server_request)[4s:5m] offset 10m`)
+	f(`f(http_server_request)[4i:5i] offset 10i`)
+	f(`F(HttpServerRequest)`)
+	f(`f(job, foo)`)
+	f(`F(Job, Foo)`)
+	f(` FOO (bar) + f  (  m  (  ),ff(1 + (  2.5)) ,M[5m ]  , "ff"  )`)
+	f(`by(2)`)
+	f(`BY(2)`)
+	f(`or(2)`)
+	f(`OR(2)`)
+	f(`bool(2)`)
+	f(`BOOL(2)`)
+	f(`"foo" + bar()`)
+	f(`a + (bool(1, 2))`)
+	f(`group_left / (on(1, 2))`)
+	f(`group_left / (f(1, 2))`)
+	f(` SUM (bar) + rate  (  m  (  ),ff(1 + (  2.5)) ,M[5m ]  , "ff"  )`)
+	f(`Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) * F2("Test")`)
+	f(`# comment
+		Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) # yet another comment
+		* F2("Test")`)
+	f(`with (ct={job="test"}) a{ct} + ct() + f({ct="x"})`)
 
 	// invalid aggrFuncExpr
 	f(`sum(`)
@@ -901,6 +925,10 @@ func TestParseError(t *testing.T) {
 	f(`with (sum(a,b)=a+b) sum(x)`)
 	f(`with (rate()=foobar) rate(x)`)
 	f(`with (x={y}) x`)
+	f(`with (ct={job="test", i="bar"}) ct + {ct, x="d"} + foo{ct, ct} + ct(1)`)
+	f(`with (f(a,f,x)=ff(x,f,a)) f(f(x,y,z),1,2)`)
+	f(`with (x="a", y="b"+x) "we"+y+"z"+f()`)
+	f(`with (x=foo) f(a, with (y=x) y)`)
 
 	// invalid withExpr with 'or' filter
 	f(`with (x={a="b" or c="d"}) {x}`)
