@@ -142,7 +142,7 @@ func TestOptimize(t *testing.T) {
 	f("foo", "foo")
 
 	// reserved words. See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/4422
-	f(`1 + (on ())`, `1 + (on())`)
+	f(`1 + (sum ())`, `1 + sum()`)
 	f(`{a="b"} + (group_left)`, `{a="b"} + (group_left{a="b"})`)
 	f(`bool{a="b"} + (ignoring{c="d"})`, `bool{a="b",c="d"} + (ignoring{a="b",c="d"})`)
 
@@ -166,7 +166,7 @@ func TestOptimize(t *testing.T) {
 	f(`foo{x="y"} * ignoring() group_left(foo,bar) baz{a="b"}`, `foo{a="b",x="y"} * ignoring() group_left(foo,bar) baz{a="b",x="y"}`)
 	f(`foo{x="y"} * on(a) group_left baz{a="b"}`, `foo{a="b",x="y"} * on(a) group_left() baz{a="b"}`)
 	f(`foo{x="y"} * on(a) group_right(x, y) baz{a="b"}`, `foo{a="b",x="y"} * on(a) group_right(x,y) baz{a="b"}`)
-	f(`f(foo, bar{baz=~"sdf"} + aa{baz=~"axx", aa="b"})`, `f(foo, bar{aa="b",baz=~"axx",baz=~"sdf"} + aa{aa="b",baz=~"axx",baz=~"sdf"})`)
+	f(`share_gt_over_time(foo, bar{baz=~"sdf"} + aa{baz=~"axx", aa="b"})`, `share_gt_over_time(foo, bar{aa="b",baz=~"axx",baz=~"sdf"} + aa{aa="b",baz=~"axx",baz=~"sdf"})`)
 	f(`sum(foo, bar{baz=~"sdf"} + aa{baz=~"axx", aa="b"})`, `sum(foo, bar{aa="b",baz=~"axx",baz=~"sdf"} + aa{aa="b",baz=~"axx",baz=~"sdf"})`)
 	f(`foo AND bar{baz="aa"}`, `foo{baz="aa"} and bar{baz="aa"}`)
 	f(`{x="y",__name__="a"} + {a="b"}`, `a{a="b",x="y"} + {a="b",x="y"}`)
@@ -222,8 +222,8 @@ func TestOptimize(t *testing.T) {
 	f(`count_values("foo", bar{baz="a"}) by (bar,b) + a{b="c"}`, `count_values("foo", bar{baz="a"}) by(bar,b) + a{b="c"}`)
 
 	// unknown func
-	f(`f(foo) + bar{baz="a"}`, `f(foo) + bar{baz="a"}`)
-	f(`f(a,b,foo{a="b"} / bar) + baz{x="y"}`, `f(a, b, foo{a="b"} / bar{a="b"}) + baz{x="y"}`)
+	f(`sum(foo) + bar{baz="a"}`, `sum(foo) + bar{baz="a"}`)
+	f(`sum(a,b,foo{a="b"} / bar) + baz{x="y"}`, `sum(a, b, foo{a="b"} / bar{a="b"}) + baz{x="y"}`)
 
 	// transform funcs
 	f(`round(foo{bar="baz"}) + sqrt(a{z=~"c"})`, `round(foo{bar="baz",z=~"c"}) + sqrt(a{bar="baz",z=~"c"})`)
