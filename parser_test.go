@@ -330,6 +330,7 @@ func TestParseSuccess(t *testing.T) {
 	same(`without + (ignoring{x="y"})`)
 	another(`a + (GROUP_LEFT) / b`, `a + (GROUP_LEFT / b)`)
 	same(`by + without`)
+	same(`group_left / (on)`)
 	another(`group_left / (sum(1, 2))`, `group_left / sum(1, 2)`)
 
 	// parensExpr
@@ -362,11 +363,14 @@ func TestParseSuccess(t *testing.T) {
 	another(`log2(foo) KEEP_metric_names + 1 / increase(bar[5m]) keep_metric_names offset 1h @ 435`,
 		`log2(foo) keep_metric_names + (1 / (increase(bar[5m]) keep_metric_names offset 1h @ 435))`)
 
-	// funcName matching keywords
+	// embedded funcName
 	same(`rate(rate(m))`)
 	same(`rate(rate(m[5m]))`)
 	same(`rate(rate(m[5m])[1h:])`)
 	same(`rate(rate(m[5m])[1h:3s])`)
+
+	// funcName with escape chars
+	another(`r\a\te(m[5m])`, `rate(m[5m])`)
 
 	// aggrFuncExpr
 	same(`sum(http_server_request) by()`)
@@ -404,7 +408,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (f="x") f`, `"x"`)
 	another(`with (foo = bar{x="x"}) x{x="y"}`, `x{x="y"}`)
 	another(`with (foo = bar{x="x"}) 1+1`, `2`)
-	//	another(`with (foo = bar{x="x"}) f()`, `f()`)
+	another(`with (foo = bar{x="x"}) time()`, `time()`)
 	another(`with (foo = bar{x="x"}) sum(x)`, `sum(x)`)
 	another(`with (foo = bar{x="x"}) baz{foo="bar"}`, `baz{foo="bar"}`)
 	another(`with (foo = bar) baz`, `baz`)
@@ -453,8 +457,8 @@ func TestParseSuccess(t *testing.T) {
 
 	// Verify withExpr recursion and forward reference
 	another(`with (x = x+y, y = x+x) y ^ 2`, `((x + y) + (x + y)) ^ 2`)
-	//	another(`with (f1(x)=f2(x), f2(x)=f1(x)^2) f1(foobar)`, `f2(foobar)`)
-	//	another(`with (f1(x)=f2(x), f2(x)=f1(x)^2) f2(foobar)`, `f2(foobar) ^ 2`)
+	another(`with (f1(x)=ceil(x), ceil(x)=f1(x)^2) f1(foobar)`, `ceil(foobar)`)
+	another(`with (f1(x)=ceil(x), ceil(x)=f1(x)^2) ceil(foobar)`, `ceil(foobar) ^ 2`)
 
 	// Verify withExpr funcs
 	another(`with (x() = y+1) x`, `y + 1`)
@@ -782,20 +786,13 @@ func TestParseError(t *testing.T) {
 	f(`f bar (x)`)
 	f(`keep_metric_names f()`)
 	f(`f() abc`)
+
+	// unknown function
 	f(`f()`)
 	f(`f(x,)`)
-	f(`-f()-Ff()`)
-	f(`F()`)
-	f(`+F()`)
-	f(`++F()`)
-	f(`--F()`)
 	f(`f(http_server_request)`)
-	f(`f(http_server_request)[4s:5m] offset 10m`)
-	f(`f(http_server_request)[4i:5i] offset 10i`)
-	f(`F(HttpServerRequest)`)
 	f(`f(job, foo)`)
-	f(`F(Job, Foo)`)
-	f(` FOO (bar) + f  (  m  (  ),ff(1 + (  2.5)) ,M[5m ]  , "ff"  )`)
+	f(`sum(a, b+f())`)
 	f(`by(2)`)
 	f(`BY(2)`)
 	f(`or(2)`)
@@ -806,14 +803,6 @@ func TestParseError(t *testing.T) {
 	f(`a + (bool(1, 2))`)
 	f(`group_left / (on(1, 2))`)
 	f(`group_left / (f(1, 2))`)
-	f(` SUM (bar) + rate  (  m  (  ),ff(1 + (  2.5)) ,M[5m ]  , "ff"  )`)
-	f(`Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) * F2("Test")`)
-	f(`# comment
-		Sum(Ff(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) # yet another comment
-		* F2("Test")`)
-
-	// funcName with escape chars
-	f(`foo\(ba\-r()`)
 
 	// invalid aggrFuncExpr
 	f(`sum(`)
@@ -926,8 +915,14 @@ func TestParseError(t *testing.T) {
 	f(`with (sum(a,b)=a+b) sum(x)`)
 	f(`with (rate()=foobar) rate(x)`)
 	f(`with (x={y}) x`)
+
+	// Invalid number of args at ct()
 	f(`with (ct={job="test", i="bar"}) ct + {ct, x="d"} + foo{ct, ct} + ct(1)`)
+
+	// unknown function ff()
 	f(`with (f(a,f,x)=ff(x,f,a)) f(f(x,y,z),1,2)`)
+
+	// Unknown function f()
 	f(`with (x="a", y="b"+x) "we"+y+"z"+f()`)
 	f(`with (x=foo) f(a, with (y=x) y)`)
 	f(`with (ct={job="test"}) a{ct} + ct() + f({ct="x"})`)
