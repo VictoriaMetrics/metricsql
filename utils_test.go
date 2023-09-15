@@ -61,6 +61,37 @@ func TestVisitAll(t *testing.T) {
 	f("123", "123,")
 	f("1+2", "3,")
 	f("1+a", "1,a,(),(),1 + a,")
-	f("f(a<b+1, sum(x) by (y))", "a,b,1,(),(),b + 1,(),(),a < (b + 1),x,by(y),sum(x) by(y),f(a < (b + 1), sum(x) by(y)),")
+	f("avg(a<b+1, sum(x) by (y))", "a,b,1,(),(),b + 1,(),(),a < (b + 1),x,by(y),sum(x) by(y),(),avg(a < (b + 1), sum(x) by(y)),")
 	f("x[1s]", "x,x[1s],")
+}
+
+func TestIsSupportedFunction(t *testing.T) {
+	f := func(s string, expectedResult bool) {
+		t.Helper()
+		result := IsSupportedFunction(s)
+		if result != expectedResult {
+			t.Fatalf("unexpected result for IsSupportedFunction(%q); got %v; want %v", s, result, expectedResult)
+		}
+	}
+
+	// empty function name is a synonim to union()
+	f("", true)
+	f("union", true)
+
+	// rollup function
+	f("rate", true)
+	f("RATE", true)
+	f("Increase", true)
+
+	// transform function
+	f("ceil", true)
+	f("histogram_QUANTILe", true)
+
+	// aggregate function
+	f("sum", true)
+	f("aVG", true)
+
+	// Unknown function
+	f("foo", false)
+	f("BAR", false)
 }
