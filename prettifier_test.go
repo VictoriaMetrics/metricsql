@@ -56,6 +56,11 @@ func TestPrettifySuccess(t *testing.T) {
 	same(`foo{bar="baz",x="y" or q="w",r="t"}`)
 	same(`foo{bar="baz"} + rate(x{y="x"}[5m] offset 1h)`)
 
+	// Verify that empty label filters aren't added to long metric names
+	same(`foobar_baz:namespace_pod_name_container_name:container_cpu_usage_seconds_total:sum_rate`)
+	another(`foobar_baz:namespace_pod_name_container_name:container_cpu_usage_seconds_total:sum_rate{}`,
+		`foobar_baz:namespace_pod_name_container_name:container_cpu_usage_seconds_total:sum_rate`)
+
 	// Verify that long label filters are split into multiple lines
 	another(`process_cpu_seconds_total{foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"}`,
 		`process_cpu_seconds_total{
