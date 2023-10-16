@@ -242,6 +242,12 @@ func TestOptimize(t *testing.T) {
 	f(`vector(foo) + bar{a="b"}`, `vector(foo) + bar{a="b"}`)
 	f(`vector(foo{x="y"} + a) + bar{a="b"}`, `vector(foo{x="y"} + a{x="y"}) + bar{a="b"}`)
 
+	// Label manipulation functions, which are in reality do not change labels for the input series
+	f(`labels_equal(foo{x="y"}, "a", "b") + label_match(bar{q="w"}, "foo", "bar")`, `labels_equal(foo{q="w",x="y"}, "a", "b") + label_match(bar{q="w",x="y"}, "foo", "bar")`)
+
+	// Label manipulation functions, which change labels for the input series, shouldn't be optimized.
+	f(`label_set(foo{x="y"}, "a", "b") + bar{q="w"}`, `label_set(foo{x="y"}, "a", "b") + bar{q="w"}`)
+
 	// multilevel transform funcs
 	f(`round(sqrt(foo)) + bar`, `round(sqrt(foo)) + bar`)
 	f(`round(sqrt(foo)) + bar{b="a"}`, `round(sqrt(foo{b="a"})) + bar{b="a"}`)
