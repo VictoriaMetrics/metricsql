@@ -82,6 +82,12 @@ var rollupFuncs = map[string]bool{
 	"tmax_over_time":         true,
 	"tmin_over_time":         true,
 	"zscore_over_time":       true,
+	// custom functions
+	"avg_daily":                 true,
+	"median_daily":              true,
+	"avg_weekly":                true,
+	"median_weekly":             true,
+	"median_weekly_with_trends": true,
 }
 
 // IsRollupFunc returns whether funcName is known rollup function.

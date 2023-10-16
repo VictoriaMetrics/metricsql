@@ -23,6 +23,7 @@ func TestParseSuccess(t *testing.T) {
 	}
 
 	// metricExpr
+	same(`((hour() < 15) and ((sum(increase(gopay_alfamart_cstore_adapter_count{response_code="00",uri="/v2/alfamart/inquiry"}[5m])) / avg_daily(7, sum(increase(gopay_alfamart_cstore_adapter_count{response_code="00",uri="/v2/alfamart/inquiry"}[5m])))) < 0.5)) < 15`)
 	same(`{}`)
 	same(`{}[5m]`)
 	same(`{}[5m:]`)
