@@ -9,6 +9,8 @@ var rollupFuncs = map[string]bool{
 	"aggr_over_time":          true,
 	"ascent_over_time":        true,
 	"avg_over_time":           true,
+	"yhat_upper":              true,
+	"yhat_lower":              true,
 	"changes":                 true,
 	"changes_prometheus":      true,
 	"count_eq_over_time":      true,
