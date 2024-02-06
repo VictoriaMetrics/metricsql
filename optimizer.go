@@ -379,6 +379,14 @@ func getAggrArgIdxForOptimization(funcName string, args []Expr) int {
 	case "quantiles":
 		return len(args) - 1
 	default:
+		if len(args) > 1 {
+			for _, e := range args {
+				if _, ok := e.(*AggrFuncExpr); ok {
+					return -1
+				}
+			}
+		}
+
 		return 0
 	}
 }

@@ -220,6 +220,22 @@ func TestOptimize(t *testing.T) {
 	f(`topk(a, foo) without (x,y) + bar{baz="a"}`, `topk(a, foo{baz="a"}) without(x,y) + bar{baz="a"}`)
 	f(`a{b="c"} + quantiles("foo", 0.1, 0.2, bar{x="y"}) by (b, x, y)`, `a{b="c",x="y"} + quantiles("foo", 0.1, 0.2, bar{b="c",x="y"}) by(b,x,y)`)
 	f(`count_values("foo", bar{baz="a"}) by (bar,b) + a{b="c"}`, `count_values("foo", bar{baz="a"}) by(bar,b) + a{b="c"}`)
+	f(
+		`sum(
+				avg(foo{bar="one"}) by (bar),
+				avg(foo{bar="two"}[1i]) by (bar)
+			) by(bar) 
+			+ avg(foo{bar="three"}) by(bar)`,
+		`sum(avg(foo{bar="one"}) by(bar), avg(foo{bar="two"}[1i]) by(bar)) by(bar) + avg(foo{bar="three"}) by(bar)`,
+	)
+	f(
+		`sum(
+				foo{bar="one"},
+				avg(foo{bar="two"}[1i]) by (bar)
+			) by(bar) 
+			+ avg(foo{bar="three"}) by(bar)`,
+		`sum(foo{bar="one"}, avg(foo{bar="two"}[1i]) by(bar)) by(bar) + avg(foo{bar="three"}) by(bar)`,
+	)
 
 	// transform funcs
 	f(`round(foo{bar="baz"}) + sqrt(a{z=~"c"})`, `round(foo{bar="baz",z=~"c"}) + sqrt(a{bar="baz",z=~"c"})`)
