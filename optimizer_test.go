@@ -215,7 +215,7 @@ func TestOptimize(t *testing.T) {
 	f(`sum(foo{bar="baz"}) without (b) / a{b="c"}`, `sum(foo{bar="baz"}) without(b) / a{b="c",bar="baz"}`)
 	f(`sum(foo{bar="baz"}) without (x) / a{b="c"}`, `sum(foo{b="c",bar="baz"}) without(x) / a{b="c",bar="baz"}`)
 	f(`sum(foo{bar="baz"}) without (bar,b) / a{b="c"}`, `sum(foo{bar="baz"}) without(bar,b) / a{b="c"}`)
-	f(`sum(foo, bar) by (a) + baz{a="b"}`, `sum(foo{a="b"}, bar) by(a) + baz{a="b"}`)
+	f(`sum(foo, bar) by (a) + baz{a="b"}`, `sum(foo{a="b"}, bar{a="b"}) by(a) + baz{a="b"}`)
 	f(`topk(3, foo) by (baz,x) + bar{baz="a"}`, `topk(3, foo{baz="a"}) by(baz,x) + bar{baz="a"}`)
 	f(`topk(a, foo) without (x,y) + bar{baz="a"}`, `topk(a, foo{baz="a"}) without(x,y) + bar{baz="a"}`)
 	f(`a{b="c"} + quantiles("foo", 0.1, 0.2, bar{x="y"}) by (b, x, y)`, `a{b="c",x="y"} + quantiles("foo", 0.1, 0.2, bar{b="c",x="y"}) by(b,x,y)`)
@@ -224,18 +224,19 @@ func TestOptimize(t *testing.T) {
 		`sum(
 				avg(foo{bar="one"}) by (bar),
 				avg(foo{bar="two"}[1i]) by (bar)
-			) by(bar) 
+			) by(bar)
 			+ avg(foo{bar="three"}) by(bar)`,
-		`sum(avg(foo{bar="one"}) by(bar), avg(foo{bar="two"}[1i]) by(bar)) by(bar) + avg(foo{bar="three"}) by(bar)`,
+		`sum(avg(foo{bar="one",bar="three"}) by(bar), avg(foo{bar="three",bar="two"}[1i]) by(bar)) by(bar) + avg(foo{bar="three"}) by(bar)`,
 	)
 	f(
 		`sum(
 				foo{bar="one"},
 				avg(foo{bar="two"}[1i]) by (bar)
-			) by(bar) 
+			) by(bar)
 			+ avg(foo{bar="three"}) by(bar)`,
-		`sum(foo{bar="one"}, avg(foo{bar="two"}[1i]) by(bar)) by(bar) + avg(foo{bar="three"}) by(bar)`,
+		`sum(foo{bar="one",bar="three"}, avg(foo{bar="three",bar="two"}[1i]) by(bar)) by(bar) + avg(foo{bar="three"}) by(bar)`,
 	)
+	f(`any(a{bar="x"}, b{bar="x",z="a"}) by (bar) + q{w="a"}`, `any(a{bar="x"}, b{bar="x",z="a"}) by(bar) + q{bar="x",w="a"}`)
 
 	// transform funcs
 	f(`round(foo{bar="baz"}) + sqrt(a{z=~"c"})`, `round(foo{bar="baz",z=~"c"}) + sqrt(a{bar="baz",z=~"c"})`)
