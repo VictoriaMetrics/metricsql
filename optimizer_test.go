@@ -58,6 +58,11 @@ func TestPushdownBinaryOpFilters(t *testing.T) {
 	// pushdown for 'or' filters
 	f(`foo{a="b" or c="d" or x="y",q="w"}`, `{x="y"}`, `foo{a="b",x="y" or c="d",x="y" or q="w",x="y"}`)
 	f(`{a="b" or x="y",q="w"} + bar`, `{x="y"}`, `{a="b",x="y" or q="w",x="y"} + bar{x="y"}`)
+
+	// pushdown for label_set
+	f(`label_set(foo, "a", "b") + bar{baz="a"}`, `{x="y"}`, `label_set(foo{x="y"}, "a", "b") + bar{baz="a",x="y"}`)
+	f(`label_set(foo, "a", "b", "x", "aa") + bar{baz="a"}`, `{x="y"}`, `label_set(foo, "a", "b", "x", "aa") + bar{baz="a",x="y"}`)
+	f(`label_set(label_set(foo, "a", "b"), "c", "d") + bar`, `{x="y"}`, `label_set(label_set(foo{x="y"}, "a", "b"), "c", "d") + bar{x="y"}`)
 }
 
 func TestGetCommonLabelFilters(t *testing.T) {
@@ -248,7 +253,6 @@ func TestOptimize(t *testing.T) {
 	f(`round(foo) + {__name__="bar",x="y"}`, `round(foo{x="y"}) + bar{x="y"}`)
 	f(`absent(foo{bar="baz"}) + sqrt(a{z=~"c"})`, `absent(foo{bar="baz"}) + sqrt(a{z=~"c"})`)
 	f(`ABSENT(foo{bar="baz"}) + sqrt(a{z=~"c"})`, `ABSENT(foo{bar="baz"}) + sqrt(a{z=~"c"})`)
-	f(`label_set(foo{bar="baz"}, "xx", "y") + a{x="y"}`, `label_set(foo{bar="baz"}, "xx", "y") + a{x="y"}`)
 	f(`now() + foo{bar="baz"} + x{y="x"}`, `(now() + foo{bar="baz",y="x"}) + x{bar="baz",y="x"}`)
 	f(`limit_offset(5, 10, {x="y"}) if {a="b"}`, `limit_offset(5, 10, {a="b",x="y"}) if {a="b",x="y"}`)
 	f(`buckets_limit(aa, {x="y"}) if {a="b"}`, `buckets_limit(aa, {a="b",x="y"}) if {a="b",x="y"}`)
@@ -262,8 +266,16 @@ func TestOptimize(t *testing.T) {
 	// Label manipulation functions, which are in reality do not change labels for the input series
 	f(`labels_equal(foo{x="y"}, "a", "b") + label_match(bar{q="w"}, "foo", "bar")`, `labels_equal(foo{q="w",x="y"}, "a", "b") + label_match(bar{q="w",x="y"}, "foo", "bar")`)
 
-	// Label manipulation functions, which change labels for the input series, shouldn't be optimized.
-	f(`label_set(foo{x="y"}, "a", "b") + bar{q="w"}`, `label_set(foo{x="y"}, "a", "b") + bar{q="w"}`)
+	// label_set
+	f(`label_set(foo, "__name__", "bar") + x`, `label_set(foo, "__name__", "bar") + x`)
+	f(`label_set(foo, "a", "bar") + x{__name__="y"}`, `label_set(foo, "a", "bar") + x{__name__="y",a="bar"}`)
+	f(`label_set(foo{bar="baz"}, "xx", "y") + a{x="y"}`, `label_set(foo{bar="baz",x="y"}, "xx", "y") + a{bar="baz",x="y",xx="y"}`)
+	f(`label_set(foo{x="y"}, "q", "b", "x", "qwe") + label_set(bar{q="w"}, "x", "a", "q", "w")`, `label_set(foo{x="y"}, "q", "b", "x", "qwe") + label_set(bar{q="w"}, "x", "a", "q", "w")`)
+
+	// alias
+	f(`alias(foo, "bar") + abc`, `label_set(foo, "__name__", "bar") + abc`)
+	f(`alias(foo, "bar") + abc{d="e"}`, `label_set(foo{d="e"}, "__name__", "bar") + abc{d="e"}`)
+	f(`alias(foo{x="y"}, "bar") + abc{d="e"}`, `label_set(foo{d="e",x="y"}, "__name__", "bar") + abc{d="e",x="y"}`)
 
 	// multilevel transform funcs
 	f(`round(sqrt(foo)) + bar`, `round(sqrt(foo)) + bar`)
