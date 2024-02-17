@@ -271,6 +271,7 @@ func TestOptimize(t *testing.T) {
 	f(`label_set(foo, "a", "bar") + x{__name__="y"}`, `label_set(foo, "a", "bar") + x{__name__="y",a="bar"}`)
 	f(`label_set(foo{bar="baz"}, "xx", "y") + a{x="y"}`, `label_set(foo{bar="baz",x="y"}, "xx", "y") + a{bar="baz",x="y",xx="y"}`)
 	f(`label_set(foo{x="y"}, "q", "b", "x", "qwe") + label_set(bar{q="w"}, "x", "a", "q", "w")`, `label_set(foo{x="y"}, "q", "b", "x", "qwe") + label_set(bar{q="w"}, "x", "a", "q", "w")`)
+	f(`label_set(foo{a="b"}, "a", "qwe") + bar{a="x"}`, `label_set(foo{a="b"}, "a", "qwe") + bar{a="qwe",a="x"}`)
 
 	// alias
 	f(`alias(foo, "bar") + abc`, `label_set(foo, "__name__", "bar") + abc`)
