@@ -85,7 +85,7 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 		switch strings.ToLower(t.Name) {
 		case "label_set":
 			return getCommonLabelFiltersForLabelSet(t.Args)
-		case "label_replace", "label_join", "label_map", "label_match", "label_mismatch":
+		case "label_replace", "label_join", "label_map", "label_match", "label_mismatch", "label_transform":
 			return getCommonLabelFiltersForLabelReplace(t.Args)
 		case "label_copy", "label_move":
 			return getCommonLabelFiltersForLabelCopy(t.Args)
@@ -339,7 +339,7 @@ func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {
 		switch strings.ToLower(t.Name) {
 		case "label_set":
 			pushdownLabelFiltersForLabelSet(t.Args, lfs)
-		case "label_replace", "label_join", "label_map", "label_match", "label_mismatch":
+		case "label_replace", "label_join", "label_map", "label_match", "label_mismatch", "label_transform":
 			pushdownLabelFiltersForLabelReplace(t.Args, lfs)
 		case "label_copy", "label_move":
 			pushdownLabelFiltersForLabelCopy(t.Args, lfs)
@@ -630,7 +630,13 @@ func getRollupArgIdxForOptimization(funcName string, args []Expr) int {
 
 func getTransformArgIdxForOptimization(funcName string, args []Expr) int {
 	switch strings.ToLower(funcName) {
-	case "", "absent", "scalar", "union", "vector", "range_normalize":
+	case "label_copy", "label_del", "label_join", "label_keep", "label_lowercase", "label_map",
+		"label_match", "label_mismatch", "label_move", "label_replace", "label_set", "label_transform",
+		"label_uppercase", "labels_equal":
+		panic(fmt.Errorf("BUG: unexpected funcName passed to getTransformArgIdxForOptimization: %s", funcName))
+	case "drop_common_labels", "range_normalize":
+		return -1
+	case "", "absent", "scalar", "union", "vector":
 		return -1
 	case "end", "now", "pi", "ru", "start", "step", "time":
 		return -1
@@ -641,9 +647,6 @@ func getTransformArgIdxForOptimization(funcName string, args []Expr) int {
 		return 1
 	case "histogram_quantiles":
 		return len(args) - 1
-	case "drop_common_labels", "label_copy", "label_del", "label_join", "label_keep", "label_lowercase",
-		"label_map", "label_move", "label_replace", "label_set", "label_transform", "label_uppercase":
-		return -1
 	case "label_graphite_group":
 		return 0
 	default:
