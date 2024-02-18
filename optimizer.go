@@ -85,10 +85,8 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 		switch strings.ToLower(t.Name) {
 		case "label_set":
 			return getCommonLabelFiltersForLabelSet(t.Args)
-		case "label_replace":
+		case "label_replace", "label_join", "label_map":
 			return getCommonLabelFiltersForLabelReplace(t.Args)
-		case "label_join":
-			return getCommonLabelFiltersForLabelJoin(t.Args)
 		case "label_copy", "label_move":
 			return getCommonLabelFiltersForLabelCopy(t.Args)
 		case "label_del", "label_uppercase", "label_lowercase":
@@ -211,16 +209,8 @@ func getCommonLabelFiltersForLabelCopy(args []Expr) []LabelFilter {
 	return lfs
 }
 
-func getCommonLabelFiltersForLabelJoin(args []Expr) []LabelFilter {
-	if len(args) < 2 {
-		return nil
-	}
-	lfs := getCommonLabelFilters(args[0])
-	return dropLabelFiltersForLabelName(lfs, args[1])
-}
-
 func getCommonLabelFiltersForLabelReplace(args []Expr) []LabelFilter {
-	if len(args) != 5 {
+	if len(args) < 2 {
 		return nil
 	}
 	lfs := getCommonLabelFilters(args[0])
@@ -349,10 +339,8 @@ func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {
 		switch strings.ToLower(t.Name) {
 		case "label_set":
 			pushdownLabelFiltersForLabelSet(t.Args, lfs)
-		case "label_replace":
+		case "label_replace", "label_join", "label_map":
 			pushdownLabelFiltersForLabelReplace(t.Args, lfs)
-		case "label_join":
-			pushdownLabelFiltersForLabelJoin(t.Args, lfs)
 		case "label_copy", "label_move":
 			pushdownLabelFiltersForLabelCopy(t.Args, lfs)
 		case "label_del", "label_uppercase", "label_lowercase":
@@ -418,16 +406,8 @@ func pushdownLabelFiltersForLabelCopy(args []Expr, lfs []LabelFilter) {
 	pushdownBinaryOpFiltersInplace(arg, lfs)
 }
 
-func pushdownLabelFiltersForLabelJoin(args []Expr, lfs []LabelFilter) {
-	if len(args) < 2 {
-		return
-	}
-	lfs = dropLabelFiltersForLabelName(lfs, args[1])
-	pushdownBinaryOpFiltersInplace(args[0], lfs)
-}
-
 func pushdownLabelFiltersForLabelReplace(args []Expr, lfs []LabelFilter) {
-	if len(args) != 5 {
+	if len(args) < 2 {
 		return
 	}
 	lfs = dropLabelFiltersForLabelName(lfs, args[1])

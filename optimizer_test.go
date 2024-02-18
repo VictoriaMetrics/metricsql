@@ -292,6 +292,10 @@ func TestOptimize(t *testing.T) {
 	f(`label_join(foo{q="z"}, "a", "b", "c") + bar{a="y"}`, `label_join(foo{q="z"}, "a", "b", "c") + bar{a="y",q="z"}`)
 	f(`label_join(foo{q="z"}, "a", "b", "c") + bar{w="y"}`, `label_join(foo{q="z",w="y"}, "a", "b", "c") + bar{q="z",w="y"}`)
 
+	// label_map
+	f(`label_map(foo, "a", "x", "y") + bar{x="y"}`, `label_map(foo{x="y"}, "a", "x", "y") + bar{x="y"}`)
+	f(`label_map(foo{a="qwe",b="c"}, "a", "x", "y") + bar{a="rt",x="y"}`, `label_map(foo{a="qwe",b="c",x="y"}, "a", "x", "y") + bar{a="rt",b="c",x="y"}`)
+
 	// label_copy
 	f(`label_copy(foo, "a", "b") + bar{x="y"}`, `label_copy(foo{x="y"}, "a", "b") + bar{x="y"}`)
 	f(`label_copy(foo, "a", "b", "c", "d") + bar{a="y",b="z"}`, `label_copy(foo{a="y"}, "a", "b", "c", "d") + bar{a="y",b="z"}`)
