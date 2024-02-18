@@ -326,6 +326,10 @@ func TestOptimize(t *testing.T) {
 	f(`label_lowercase(foo, "a", "b") + bar{x="y"}`, `label_lowercase(foo{x="y"}, "a", "b") + bar{x="y"}`)
 	f(`label_lowercase(foo{a="q",b="w",z="d"}, "a", "b") + bar{a="y",b="z",x="y"}`, `label_lowercase(foo{a="q",b="w",x="y",z="d"}, "a", "b") + bar{a="y",b="z",x="y",z="d"}`)
 
+	// labels_equal
+	f(`labels_equal(foo, "a", "b") + bar{x="y"}`, `labels_equal(foo{x="y"}, "a", "b") + bar{x="y"}`)
+	f(`labels_equal(foo{a="q",b="w",z="d"}, "a", "b") + bar{a="y",b="z",x="y"}`, `labels_equal(foo{a="q",b="w",x="y",z="d"}, "a", "b") + bar{a="y",b="z",x="y",z="d"}`)
+
 	// label_graphite_group
 	f(`label_graphite_group(foo, 1, 2) + bar{x="y"}`, `label_graphite_group(foo{x="y"}, 1, 2) + bar{x="y"}`)
 	f(`label_graphite_group({a="b",__name__="qwe"}, 1, 2) + {__name__="abc",x="y"}`, `label_graphite_group(qwe{a="b",x="y"}, 1, 2) + abc{a="b",x="y"}`)
