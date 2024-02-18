@@ -91,7 +91,7 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 			return getCommonLabelFiltersForLabelJoin(t.Args)
 		case "label_copy", "label_move":
 			return getCommonLabelFiltersForLabelCopy(t.Args)
-		case "label_del":
+		case "label_del", "label_uppercase", "label_lowercase":
 			return getCommonLabelFiltersForLabelDel(t.Args)
 		case "label_keep":
 			return getCommonLabelFiltersForLabelKeep(t.Args)
@@ -355,7 +355,7 @@ func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {
 			pushdownLabelFiltersForLabelJoin(t.Args, lfs)
 		case "label_copy", "label_move":
 			pushdownLabelFiltersForLabelCopy(t.Args, lfs)
-		case "label_del":
+		case "label_del", "label_uppercase", "label_lowercase":
 			pushdownLabelFiltersForLabelDel(t.Args, lfs)
 		case "label_keep":
 			pushdownLabelFiltersForLabelKeep(t.Args, lfs)
