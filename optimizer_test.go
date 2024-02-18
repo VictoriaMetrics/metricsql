@@ -296,6 +296,14 @@ func TestOptimize(t *testing.T) {
 	f(`label_map(foo, "a", "x", "y") + bar{x="y"}`, `label_map(foo{x="y"}, "a", "x", "y") + bar{x="y"}`)
 	f(`label_map(foo{a="qwe",b="c"}, "a", "x", "y") + bar{a="rt",x="y"}`, `label_map(foo{a="qwe",b="c",x="y"}, "a", "x", "y") + bar{a="rt",b="c",x="y"}`)
 
+	// label_match
+	f(`label_match(foo, "a", "x", "y") + bar{x="y"}`, `label_match(foo{x="y"}, "a", "x", "y") + bar{x="y"}`)
+	f(`label_match(foo{a="qwe",b="c"}, "a", "x", "y") + bar{a="rt",x="y"}`, `label_match(foo{a="qwe",b="c",x="y"}, "a", "x", "y") + bar{a="rt",b="c",x="y"}`)
+
+	// label_mismatch
+	f(`label_mismatch(foo, "a", "x", "y") + bar{x="y"}`, `label_mismatch(foo{x="y"}, "a", "x", "y") + bar{x="y"}`)
+	f(`label_mismatch(foo{a="qwe",b="c"}, "a", "x", "y") + bar{a="rt",x="y"}`, `label_mismatch(foo{a="qwe",b="c",x="y"}, "a", "x", "y") + bar{a="rt",b="c",x="y"}`)
+
 	// label_copy
 	f(`label_copy(foo, "a", "b") + bar{x="y"}`, `label_copy(foo{x="y"}, "a", "b") + bar{x="y"}`)
 	f(`label_copy(foo, "a", "b", "c", "d") + bar{a="y",b="z"}`, `label_copy(foo{a="y"}, "a", "b", "c", "d") + bar{a="y",b="z"}`)
