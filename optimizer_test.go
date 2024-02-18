@@ -292,6 +292,16 @@ func TestOptimize(t *testing.T) {
 	f(`label_join(foo{q="z"}, "a", "b", "c") + bar{a="y"}`, `label_join(foo{q="z"}, "a", "b", "c") + bar{a="y",q="z"}`)
 	f(`label_join(foo{q="z"}, "a", "b", "c") + bar{w="y"}`, `label_join(foo{q="z",w="y"}, "a", "b", "c") + bar{q="z",w="y"}`)
 
+	// label_copy
+	f(`label_copy(foo, "a", "b") + bar{x="y"}`, `label_copy(foo{x="y"}, "a", "b") + bar{x="y"}`)
+	f(`label_copy(foo, "a", "b", "c", "d") + bar{a="y",b="z"}`, `label_copy(foo{a="y"}, "a", "b", "c", "d") + bar{a="y",b="z"}`)
+	f(`label_copy(foo{q="w"}, "a", "b") + bar{a="y",b="z"}`, `label_copy(foo{a="y",q="w"}, "a", "b") + bar{a="y",b="z",q="w"}`)
+	f(`label_copy(foo{b="w"}, "a", "b") + bar{a="y",b="z"}`, `label_copy(foo{a="y",b="w"}, "a", "b") + bar{a="y",b="z"}`)
+
+	// label_del
+	f(`label_del(foo, "a", "b") + bar{x="y"}`, `label_del(foo{x="y"}, "a", "b") + bar{x="y"}`)
+	f(`label_del(foo{a="q",b="w",z="d"}, "a", "b") + bar{a="y",b="z",x="y"}`, `label_del(foo{a="q",b="w",x="y",z="d"}, "a", "b") + bar{a="y",b="z",x="y",z="d"}`)
+
 	// multilevel transform funcs
 	f(`round(sqrt(foo)) + bar`, `round(sqrt(foo)) + bar`)
 	f(`round(sqrt(foo)) + bar{b="a"}`, `round(sqrt(foo{b="a"})) + bar{b="a"}`)

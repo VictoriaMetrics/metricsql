@@ -89,6 +89,10 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 			return getCommonLabelFiltersForLabelReplace(t.Args)
 		case "label_join":
 			return getCommonLabelFiltersForLabelJoin(t.Args)
+		case "label_copy", "label_move":
+			return getCommonLabelFiltersForLabelCopy(t.Args)
+		case "label_del":
+			return getCommonLabelFiltersForLabelDel(t.Args)
 		default:
 			arg := getFuncArgForOptimization(t.Name, t.Args)
 			if arg == nil {
@@ -168,6 +172,33 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 	default:
 		return nil
 	}
+}
+
+func getCommonLabelFiltersForLabelDel(args []Expr) []LabelFilter {
+	if len(args) == 0 {
+		return nil
+	}
+	lfs := getCommonLabelFilters(args[0])
+	args = args[1:]
+	for i := 0; i < len(args); i++ {
+		lfs = dropLabelFiltersForLabelName(lfs, args[i])
+	}
+	return lfs
+}
+
+func getCommonLabelFiltersForLabelCopy(args []Expr) []LabelFilter {
+	if len(args) == 0 {
+		return nil
+	}
+	lfs := getCommonLabelFilters(args[0])
+	args = args[1:]
+	for i := 0; i < len(args); i += 2 {
+		if i+1 >= len(args) {
+			return nil
+		}
+		lfs = dropLabelFiltersForLabelName(lfs, args[i+1])
+	}
+	return lfs
 }
 
 func getCommonLabelFiltersForLabelJoin(args []Expr) []LabelFilter {
@@ -327,6 +358,10 @@ func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {
 			pushdownLabelFiltersForLabelReplace(t.Args, lfs)
 		case "label_join":
 			pushdownLabelFiltersForLabelJoin(t.Args, lfs)
+		case "label_copy", "label_move":
+			pushdownLabelFiltersForLabelCopy(t.Args, lfs)
+		case "label_del":
+			pushdownLabelFiltersForLabelDel(t.Args, lfs)
 		default:
 			arg := getFuncArgForOptimization(t.Name, t.Args)
 			if arg != nil {
@@ -351,6 +386,33 @@ func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {
 		pushdownBinaryOpFiltersInplace(t.Left, lfs)
 		pushdownBinaryOpFiltersInplace(t.Right, lfs)
 	}
+}
+
+func pushdownLabelFiltersForLabelDel(args []Expr, lfs []LabelFilter) {
+	if len(args) == 0 {
+		return
+	}
+	arg := args[0]
+	args = args[1:]
+	for i := 0; i < len(args); i++ {
+		lfs = dropLabelFiltersForLabelName(lfs, args[i])
+	}
+	pushdownBinaryOpFiltersInplace(arg, lfs)
+}
+
+func pushdownLabelFiltersForLabelCopy(args []Expr, lfs []LabelFilter) {
+	if len(args) == 0 {
+		return
+	}
+	arg := args[0]
+	args = args[1:]
+	for i := 0; i < len(args); i += 2 {
+		if i+1 >= len(args) {
+			return
+		}
+		lfs = dropLabelFiltersForLabelName(lfs, args[i+1])
+	}
+	pushdownBinaryOpFiltersInplace(arg, lfs)
 }
 
 func pushdownLabelFiltersForLabelJoin(args []Expr, lfs []LabelFilter) {
