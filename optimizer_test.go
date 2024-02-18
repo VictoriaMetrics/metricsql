@@ -278,6 +278,20 @@ func TestOptimize(t *testing.T) {
 	f(`alias(foo, "bar") + abc{d="e"}`, `label_set(foo{d="e"}, "__name__", "bar") + abc{d="e"}`)
 	f(`alias(foo{x="y"}, "bar") + abc{d="e"}`, `label_set(foo{d="e",x="y"}, "__name__", "bar") + abc{d="e",x="y"}`)
 
+	// label_replace
+	f(`label_replace(foo, "a", "b", "c", "d") + bar{x="y"}`, `label_replace(foo{x="y"}, "a", "b", "c", "d") + bar{x="y"}`)
+	f(`label_replace(foo, "a", "b", "c", "d") + bar{a="y"}`, `label_replace(foo, "a", "b", "c", "d") + bar{a="y"}`)
+	f(`label_replace(foo{x="qwe"}, "a", "b", "c", "d") + bar{a="y"}`, `label_replace(foo{x="qwe"}, "a", "b", "c", "d") + bar{a="y",x="qwe"}`)
+	f(`label_replace(foo{x="qwe"}, "a", "b", "c", "d") + bar{x="y"}`, `label_replace(foo{x="qwe",x="y"}, "a", "b", "c", "d") + bar{x="qwe",x="y"}`)
+	f(`label_replace(foo{aa!="qwe"}, "a", "b", "c", "d") + bar{x="y"}`, `label_replace(foo{aa!="qwe",x="y"}, "a", "b", "c", "d") + bar{aa!="qwe",x="y"}`)
+
+	// label_join
+	f(`label_join(foo, "a", "b", "c") + bar{x="y"}`, `label_join(foo{x="y"}, "a", "b", "c") + bar{x="y"}`)
+	f(`label_join(foo, "a", "b", "c") + bar{a="y"}`, `label_join(foo, "a", "b", "c") + bar{a="y"}`)
+	f(`label_join(foo{a="qwe"}, "a", "b", "c") + bar{x="y"}`, `label_join(foo{a="qwe",x="y"}, "a", "b", "c") + bar{x="y"}`)
+	f(`label_join(foo{q="z"}, "a", "b", "c") + bar{a="y"}`, `label_join(foo{q="z"}, "a", "b", "c") + bar{a="y",q="z"}`)
+	f(`label_join(foo{q="z"}, "a", "b", "c") + bar{w="y"}`, `label_join(foo{q="z",w="y"}, "a", "b", "c") + bar{q="z",w="y"}`)
+
 	// multilevel transform funcs
 	f(`round(sqrt(foo)) + bar`, `round(sqrt(foo)) + bar`)
 	f(`round(sqrt(foo)) + bar{b="a"}`, `round(sqrt(foo{b="a"})) + bar{b="a"}`)
