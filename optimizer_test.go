@@ -302,6 +302,14 @@ func TestOptimize(t *testing.T) {
 	f(`label_del(foo, "a", "b") + bar{x="y"}`, `label_del(foo{x="y"}, "a", "b") + bar{x="y"}`)
 	f(`label_del(foo{a="q",b="w",z="d"}, "a", "b") + bar{a="y",b="z",x="y"}`, `label_del(foo{a="q",b="w",x="y",z="d"}, "a", "b") + bar{a="y",b="z",x="y",z="d"}`)
 
+	// label_keep
+	f(`label_keep(foo, "a", "b") + bar{x="y"}`, `label_keep(foo, "a", "b") + bar{x="y"}`)
+	f(`label_keep(foo{a="q",c="d"}, "a", "b") + bar{x="y",b="z"}`, `label_keep(foo{a="q",b="z",c="d"}, "a", "b") + bar{a="q",b="z",x="y"}`)
+
+	// label_graphite_group
+	f(`label_graphite_group(foo, 1, 2) + bar{x="y"}`, `label_graphite_group(foo{x="y"}, 1, 2) + bar{x="y"}`)
+	f(`label_graphite_group({a="b",__name__="qwe"}, 1, 2) + {__name__="abc",x="y"}`, `label_graphite_group(qwe{a="b",x="y"}, 1, 2) + abc{a="b",x="y"}`)
+
 	// multilevel transform funcs
 	f(`round(sqrt(foo)) + bar`, `round(sqrt(foo)) + bar`)
 	f(`round(sqrt(foo)) + bar{b="a"}`, `round(sqrt(foo{b="a"})) + bar{b="a"}`)
