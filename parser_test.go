@@ -80,6 +80,11 @@ func TestParseSuccess(t *testing.T) {
 	another(`metric{foo="bar" OR baz="a"}`, `metric{foo="bar" or baz="a"}`)
 	another(`{foo="bar" OR baz="a"}`, `{foo="bar" or baz="a"}`)
 
+	another(`{__name__="a",bar="baz" or __name__="a"}`, `a{bar="baz"}`)
+	another(`{__name__="a",bar="baz" or __name__="a" or __name__="a"}`, `a{bar="baz"}`)
+	another(`{__name__="a",bar="baz" or __name__="a",bar="abc"}`, `a{bar="baz" or bar="abc"}`)
+	another(`{__name__="a" or __name__="a",bar="abc",x!="y"}`, `a{bar="abc",x!="y"}`)
+
 	// @ modifier
 	// See https://prometheus.io/docs/prometheus/latest/querying/basics/#modifier
 	same(`foo @ 123.45`)
