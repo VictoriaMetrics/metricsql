@@ -52,7 +52,7 @@ func TestPushdownBinaryOpFilters(t *testing.T) {
 	f(`a / sum(x)`, `{a="b",c=~"foo|bar"}`, `a{a="b",c=~"foo|bar"} / sum(x)`)
 	f(`round(rate(x[5m] offset -1h)) + 123 / {a="b"}`, `{x!="y"}`, `round(rate(x{x!="y"}[5m] offset -1h)) + (123 / {a="b",x!="y"})`)
 	f(`scalar(foo)+bar`, `{a="b"}`, `scalar(foo) + bar{a="b"}`)
-	f(`vector(foo)`, `{a="b"}`, `vector(foo)`)
+	f(`vector(foo)`, `{a="b"}`, `vector(foo{a="b"})`)
 	f(`{a="b"} + on() group_left() {c="d"}`, `{a="b"}`, `{a="b"} + on() group_left() {c="d"}`)
 
 	// pushdown for 'or' filters
@@ -264,10 +264,12 @@ func TestOptimize(t *testing.T) {
 	f(`histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by (le)) - {a="b"}`, `histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by(le)) - {a="b"}`)
 	f(`histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by (le,x)) - {a="b"}`, `histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by(le,x)) - {a="b",x="y"}`)
 	f(`histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by (le,x,a)) - {a="b"}`, `histogram_quantiles("q", 0.1, 0.9, sum(rate({a="b",x="y"}[5m])) by(le,x,a)) - {a="b",x="y"}`)
-	f(`vector(foo) + bar{a="b"}`, `vector(foo) + bar{a="b"}`)
-	f(`vector(foo{x="y"} + a) + bar{a="b"}`, `vector(foo{x="y"} + a{x="y"}) + bar{a="b"}`)
 
-	// Label manipulation functions, which are in reality do not change labels for the input series
+	// vector
+	f(`vector(foo) + bar{a="b"}`, `vector(foo{a="b"}) + bar{a="b"}`)
+	f(`vector(foo{x="y"} + a) + bar{a="b"}`, `vector(foo{a="b",x="y"} + a{a="b",x="y"}) + bar{a="b",x="y"}`)
+
+	// labels_equal
 	f(`labels_equal(foo{x="y"}, "a", "b") + label_match(bar{q="w"}, "foo", "bar")`, `labels_equal(foo{q="w",x="y"}, "a", "b") + label_match(bar{q="w",x="y"}, "foo", "bar")`)
 
 	// label_set

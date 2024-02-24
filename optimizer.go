@@ -647,8 +647,8 @@ func getAggrArgIdxForOptimization(funcName string, args []Expr) int {
 	case "count_values":
 		panic(fmt.Errorf("BUG: count_values must be already handled"))
 	default:
-		if len(args) > 1 && canAcceptMultipleArgsForAggrFunc(funcName) {
-			panic(fmt.Errorf("BUG: %d > 1 args passed to aggregate function %q; this case must be already handled", len(args), funcName))
+		if canAcceptMultipleArgsForAggrFunc(funcName) {
+			panic(fmt.Errorf("BUG: %s must be already handled", funcName))
 		}
 		return 0
 	}
@@ -689,7 +689,7 @@ func getTransformArgIdxForOptimization(funcName string, args []Expr) int {
 		panic(fmt.Errorf("BUG: %s must be already handled", funcName))
 	case "drop_common_labels":
 		return -1
-	case "", "absent", "scalar", "union", "vector":
+	case "", "absent", "scalar", "union":
 		return -1
 	case "end", "now", "pi", "ru", "start", "step", "time":
 		return -1
@@ -700,8 +700,6 @@ func getTransformArgIdxForOptimization(funcName string, args []Expr) int {
 		return 1
 	case "histogram_quantiles":
 		return len(args) - 1
-	case "label_graphite_group":
-		return 0
 	default:
 		return 0
 	}
