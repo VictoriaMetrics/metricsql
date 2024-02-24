@@ -96,7 +96,7 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 			return getCommonLabelFiltersForLabelKeep(args)
 		case "count_values_over_time":
 			return getCommonLabelFiltersForCountValuesOverTime(args)
-		case "range_normalize":
+		case "range_normalize", "union", "":
 			return intersectLabelFiltersForAllArgs(args)
 		default:
 			arg := getFuncArgForOptimization(t.Name, args)
@@ -379,7 +379,7 @@ func pushdownBinaryOpFiltersInplace(lfs []LabelFilter, e Expr) {
 			pushdownLabelFiltersForLabelKeep(lfs, args)
 		case "count_values_over_time":
 			pushdownLabelFiltersForCountValuesOverTime(lfs, args)
-		case "range_normalize":
+		case "range_normalize", "union", "":
 			pushdownLabelFiltersForAllArgs(lfs, args)
 		default:
 			arg := getFuncArgForOptimization(t.Name, args)
@@ -685,11 +685,11 @@ func getTransformArgIdxForOptimization(funcName string, args []Expr) int {
 	switch strings.ToLower(funcName) {
 	case "label_copy", "label_del", "label_join", "label_keep", "label_lowercase", "label_map",
 		"label_match", "label_mismatch", "label_move", "label_replace", "label_set", "label_transform",
-		"label_uppercase", "labels_equal", "range_normalize":
+		"label_uppercase", "labels_equal", "range_normalize", "", "union":
 		panic(fmt.Errorf("BUG: %s must be already handled", funcName))
 	case "drop_common_labels":
 		return -1
-	case "", "absent", "scalar", "union":
+	case "absent", "scalar":
 		return -1
 	case "end", "now", "pi", "ru", "start", "step", "time":
 		return -1
