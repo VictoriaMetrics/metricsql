@@ -102,7 +102,18 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 		}
 	case *AggrFuncExpr:
 		args := t.Args
-		if len(args) > 0 && canAcceptMultipleArgsForAggrFunc(t.Name) {
+		if strings.ToLower(t.Name) == "count_values" {
+			if len(args) != 2 {
+				return nil
+			}
+			lfs := getCommonLabelFilters(args[1])
+			lfs = dropLabelFiltersForLabelName(lfs, args[0])
+			return trimFiltersByAggrModifier(lfs, t)
+		}
+		if canAcceptMultipleArgsForAggrFunc(t.Name) {
+			if len(args) == 0 {
+				return nil
+			}
 			lfs := getCommonLabelFilters(args[0])
 			for _, arg := range args[1:] {
 				lfsNext := getCommonLabelFilters(arg)
@@ -356,7 +367,12 @@ func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {
 	case *AggrFuncExpr:
 		lfs = trimFiltersByAggrModifier(lfs, t)
 		args := t.Args
-		if len(args) > 0 && canAcceptMultipleArgsForAggrFunc(t.Name) {
+		if strings.ToLower(t.Name) == "count_values" {
+			if len(args) == 2 {
+				lfs = dropLabelFiltersForLabelName(lfs, args[0])
+				pushdownBinaryOpFiltersInplace(args[1], lfs)
+			}
+		} else if canAcceptMultipleArgsForAggrFunc(t.Name) {
 			for _, arg := range args {
 				pushdownBinaryOpFiltersInplace(arg, lfs)
 			}
@@ -591,10 +607,10 @@ func getAggrArgIdxForOptimization(funcName string, args []Expr) int {
 		"limitk", "outliers_mad", "outliersk", "quantile",
 		"topk", "topk_avg", "topk_max", "topk_median", "topk_last", "topk_min":
 		return 1
-	case "count_values":
-		return -1
 	case "quantiles":
 		return len(args) - 1
+	case "count_values":
+		panic(fmt.Errorf("BUG: count_values must be already handled"))
 	default:
 		if len(args) > 1 && canAcceptMultipleArgsForAggrFunc(funcName) {
 			panic(fmt.Errorf("BUG: %d > 1 args passed to aggregate function %q; this case must be already handled", len(args), funcName))
