@@ -60,18 +60,20 @@ func optimizeInplace(e Expr) {
 		optimizeInplace(t.Expr)
 		optimizeInplace(t.At)
 	case *FuncExpr:
-		for _, arg := range t.Args {
-			optimizeInplace(arg)
-		}
+		optimizeArgsInplace(t.Args)
 	case *AggrFuncExpr:
-		for _, arg := range t.Args {
-			optimizeInplace(arg)
-		}
+		optimizeArgsInplace(t.Args)
 	case *BinaryOpExpr:
 		optimizeInplace(t.Left)
 		optimizeInplace(t.Right)
 		lfs := getCommonLabelFilters(t)
 		pushdownBinaryOpFiltersInplace(lfs, t)
+	}
+}
+
+func optimizeArgsInplace(args []Expr) {
+	for _, arg := range args {
+		optimizeInplace(arg)
 	}
 }
 
