@@ -357,6 +357,9 @@ func TestOptimize(t *testing.T) {
 	f(`{x="y"} + quantile_over_time(0.5, {a="b"})`, `{a="b",x="y"} + quantile_over_time(0.5, {a="b",x="y"})`)
 	f(`quantiles_over_time("quantile", 0.1, 0.9, foo{x="y"}[5m] offset 4h) + bar{a!="b"}`, `quantiles_over_time("quantile", 0.1, 0.9, foo{a!="b",x="y"}[5m] offset 4h) + bar{a!="b",x="y"}`)
 
+	// range_normalize
+	f(`range_normalize(foo{a="b",c="d"},bar{a="b",x="y"}) + baz{z="w"}`, `range_normalize(foo{a="b",c="d",z="w"}, bar{a="b",x="y",z="w"}) + baz{a="b",z="w"}`)
+
 	// @ modifier
 	f(`foo @ end() + bar{baz="a"}`, `(foo{baz="a"} @ end()) + bar{baz="a"}`)
 	f(`sum(foo @ end()) + bar{baz="a"}`, `sum(foo @ end()) + bar{baz="a"}`)

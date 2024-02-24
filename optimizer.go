@@ -71,7 +71,7 @@ func optimizeInplace(e Expr) {
 		optimizeInplace(t.Left)
 		optimizeInplace(t.Right)
 		lfs := getCommonLabelFilters(t)
-		pushdownBinaryOpFiltersInplace(t, lfs)
+		pushdownBinaryOpFiltersInplace(lfs, t)
 	}
 }
 
@@ -82,19 +82,22 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 	case *RollupExpr:
 		return getCommonLabelFilters(t.Expr)
 	case *FuncExpr:
+		args := t.Args
 		switch strings.ToLower(t.Name) {
 		case "label_set":
-			return getCommonLabelFiltersForLabelSet(t.Args)
+			return getCommonLabelFiltersForLabelSet(args)
 		case "label_replace", "label_join", "label_map", "label_match", "label_mismatch", "label_transform":
-			return getCommonLabelFiltersForLabelReplace(t.Args)
+			return getCommonLabelFiltersForLabelReplace(args)
 		case "label_copy", "label_move":
-			return getCommonLabelFiltersForLabelCopy(t.Args)
+			return getCommonLabelFiltersForLabelCopy(args)
 		case "label_del", "label_uppercase", "label_lowercase", "labels_equal":
-			return getCommonLabelFiltersForLabelDel(t.Args)
+			return getCommonLabelFiltersForLabelDel(args)
 		case "label_keep":
-			return getCommonLabelFiltersForLabelKeep(t.Args)
+			return getCommonLabelFiltersForLabelKeep(args)
+		case "range_normalize":
+			return intersectLabelFiltersForAllArgs(args)
 		default:
-			arg := getFuncArgForOptimization(t.Name, t.Args)
+			arg := getFuncArgForOptimization(t.Name, args)
 			if arg == nil {
 				return nil
 			}
@@ -111,14 +114,7 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 			return trimFiltersByAggrModifier(lfs, t)
 		}
 		if canAcceptMultipleArgsForAggrFunc(t.Name) {
-			if len(args) == 0 {
-				return nil
-			}
-			lfs := getCommonLabelFilters(args[0])
-			for _, arg := range args[1:] {
-				lfsNext := getCommonLabelFilters(arg)
-				lfs = intersectLabelFilters(lfs, lfsNext)
-			}
+			lfs := intersectLabelFiltersForAllArgs(args)
 			return trimFiltersByAggrModifier(lfs, t)
 		}
 		arg := getFuncArgForOptimization(t.Name, args)
@@ -183,6 +179,18 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 	default:
 		return nil
 	}
+}
+
+func intersectLabelFiltersForAllArgs(args []Expr) []LabelFilter {
+	if len(args) == 0 {
+		return nil
+	}
+	lfs := getCommonLabelFilters(args[0])
+	for _, arg := range args[1:] {
+		lfsNext := getCommonLabelFilters(arg)
+		lfs = intersectLabelFilters(lfs, lfsNext)
+	}
+	return lfs
 }
 
 func getCommonLabelFiltersForLabelKeep(args []Expr) []LabelFilter {
@@ -329,11 +337,11 @@ func PushdownBinaryOpFilters(e Expr, commonFilters []LabelFilter) Expr {
 		return e
 	}
 	eCopy := Clone(e)
-	pushdownBinaryOpFiltersInplace(eCopy, commonFilters)
+	pushdownBinaryOpFiltersInplace(commonFilters, eCopy)
 	return eCopy
 }
 
-func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {
+func pushdownBinaryOpFiltersInplace(lfs []LabelFilter, e Expr) {
 	if len(lfs) == 0 {
 		return
 	}
@@ -345,23 +353,26 @@ func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {
 			t.LabelFilterss[i] = lfsLocal
 		}
 	case *RollupExpr:
-		pushdownBinaryOpFiltersInplace(t.Expr, lfs)
+		pushdownBinaryOpFiltersInplace(lfs, t.Expr)
 	case *FuncExpr:
+		args := t.Args
 		switch strings.ToLower(t.Name) {
 		case "label_set":
-			pushdownLabelFiltersForLabelSet(t.Args, lfs)
+			pushdownLabelFiltersForLabelSet(lfs, args)
 		case "label_replace", "label_join", "label_map", "label_match", "label_mismatch", "label_transform":
-			pushdownLabelFiltersForLabelReplace(t.Args, lfs)
+			pushdownLabelFiltersForLabelReplace(lfs, args)
 		case "label_copy", "label_move":
-			pushdownLabelFiltersForLabelCopy(t.Args, lfs)
+			pushdownLabelFiltersForLabelCopy(lfs, args)
 		case "label_del", "label_uppercase", "label_lowercase", "labels_equal":
-			pushdownLabelFiltersForLabelDel(t.Args, lfs)
+			pushdownLabelFiltersForLabelDel(lfs, args)
 		case "label_keep":
-			pushdownLabelFiltersForLabelKeep(t.Args, lfs)
+			pushdownLabelFiltersForLabelKeep(lfs, args)
+		case "range_normalize":
+			pushdownLabelFiltersForAllArgs(lfs, args)
 		default:
-			arg := getFuncArgForOptimization(t.Name, t.Args)
+			arg := getFuncArgForOptimization(t.Name, args)
 			if arg != nil {
-				pushdownBinaryOpFiltersInplace(arg, lfs)
+				pushdownBinaryOpFiltersInplace(lfs, arg)
 			}
 		}
 	case *AggrFuncExpr:
@@ -370,42 +381,46 @@ func pushdownBinaryOpFiltersInplace(e Expr, lfs []LabelFilter) {
 		if strings.ToLower(t.Name) == "count_values" {
 			if len(args) == 2 {
 				lfs = dropLabelFiltersForLabelName(lfs, args[0])
-				pushdownBinaryOpFiltersInplace(args[1], lfs)
+				pushdownBinaryOpFiltersInplace(lfs, args[1])
 			}
 		} else if canAcceptMultipleArgsForAggrFunc(t.Name) {
-			for _, arg := range args {
-				pushdownBinaryOpFiltersInplace(arg, lfs)
-			}
+			pushdownLabelFiltersForAllArgs(lfs, args)
 		} else {
 			arg := getFuncArgForOptimization(t.Name, args)
 			if arg != nil {
-				pushdownBinaryOpFiltersInplace(arg, lfs)
+				pushdownBinaryOpFiltersInplace(lfs, arg)
 			}
 		}
 	case *BinaryOpExpr:
 		lfs = TrimFiltersByGroupModifier(lfs, t)
-		pushdownBinaryOpFiltersInplace(t.Left, lfs)
-		pushdownBinaryOpFiltersInplace(t.Right, lfs)
+		pushdownBinaryOpFiltersInplace(lfs, t.Left)
+		pushdownBinaryOpFiltersInplace(lfs, t.Right)
 	}
 }
 
-func pushdownLabelFiltersForLabelKeep(args []Expr, lfs []LabelFilter) {
+func pushdownLabelFiltersForAllArgs(lfs []LabelFilter, args []Expr) {
+	for _, arg := range args {
+		pushdownBinaryOpFiltersInplace(lfs, arg)
+	}
+}
+
+func pushdownLabelFiltersForLabelKeep(lfs []LabelFilter, args []Expr) {
 	if len(args) == 0 {
 		return
 	}
 	lfs = keepLabelFiltersForLabelNames(lfs, args[1:])
-	pushdownBinaryOpFiltersInplace(args[0], lfs)
+	pushdownBinaryOpFiltersInplace(lfs, args[0])
 }
 
-func pushdownLabelFiltersForLabelDel(args []Expr, lfs []LabelFilter) {
+func pushdownLabelFiltersForLabelDel(lfs []LabelFilter, args []Expr) {
 	if len(args) == 0 {
 		return
 	}
 	lfs = dropLabelFiltersForLabelNames(lfs, args[1:])
-	pushdownBinaryOpFiltersInplace(args[0], lfs)
+	pushdownBinaryOpFiltersInplace(lfs, args[0])
 }
 
-func pushdownLabelFiltersForLabelCopy(args []Expr, lfs []LabelFilter) {
+func pushdownLabelFiltersForLabelCopy(lfs []LabelFilter, args []Expr) {
 	if len(args) == 0 {
 		return
 	}
@@ -419,18 +434,18 @@ func pushdownLabelFiltersForLabelCopy(args []Expr, lfs []LabelFilter) {
 		labelNames = append(labelNames, args[i+1])
 	}
 	lfs = dropLabelFiltersForLabelNames(lfs, labelNames)
-	pushdownBinaryOpFiltersInplace(arg, lfs)
+	pushdownBinaryOpFiltersInplace(lfs, arg)
 }
 
-func pushdownLabelFiltersForLabelReplace(args []Expr, lfs []LabelFilter) {
+func pushdownLabelFiltersForLabelReplace(lfs []LabelFilter, args []Expr) {
 	if len(args) < 2 {
 		return
 	}
 	lfs = dropLabelFiltersForLabelName(lfs, args[1])
-	pushdownBinaryOpFiltersInplace(args[0], lfs)
+	pushdownBinaryOpFiltersInplace(lfs, args[0])
 }
 
-func pushdownLabelFiltersForLabelSet(args []Expr, lfs []LabelFilter) {
+func pushdownLabelFiltersForLabelSet(lfs []LabelFilter, args []Expr) {
 	if len(args) == 0 {
 		return
 	}
@@ -441,7 +456,7 @@ func pushdownLabelFiltersForLabelSet(args []Expr, lfs []LabelFilter) {
 		labelNames = append(labelNames, args[i])
 	}
 	lfs = dropLabelFiltersForLabelNames(lfs, labelNames)
-	pushdownBinaryOpFiltersInplace(arg, lfs)
+	pushdownBinaryOpFiltersInplace(lfs, arg)
 }
 
 func intersectLabelFilters(lfsA, lfsB []LabelFilter) []LabelFilter {
@@ -648,9 +663,9 @@ func getTransformArgIdxForOptimization(funcName string, args []Expr) int {
 	switch strings.ToLower(funcName) {
 	case "label_copy", "label_del", "label_join", "label_keep", "label_lowercase", "label_map",
 		"label_match", "label_mismatch", "label_move", "label_replace", "label_set", "label_transform",
-		"label_uppercase", "labels_equal":
-		panic(fmt.Errorf("BUG: unexpected funcName passed to getTransformArgIdxForOptimization: %s", funcName))
-	case "drop_common_labels", "range_normalize":
+		"label_uppercase", "labels_equal", "range_normalize":
+		panic(fmt.Errorf("BUG: %s must be already handled", funcName))
+	case "drop_common_labels":
 		return -1
 	case "", "absent", "scalar", "union", "vector":
 		return -1
