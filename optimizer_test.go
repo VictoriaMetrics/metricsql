@@ -360,6 +360,9 @@ func TestOptimize(t *testing.T) {
 	// range_normalize
 	f(`range_normalize(foo{a="b",c="d"},bar{a="b",x="y"}) + baz{z="w"}`, `range_normalize(foo{a="b",c="d",z="w"}, bar{a="b",x="y",z="w"}) + baz{a="b",z="w"}`)
 
+	// count_values_over_time
+	f(`count_values_over_time("a", foo{a="x",b="c"}[5m]) + bar{a="y",d="e"}`, `count_values_over_time("a", foo{a="x",b="c",d="e"}[5m]) + bar{a="y",b="c",d="e"}`)
+
 	// @ modifier
 	f(`foo @ end() + bar{baz="a"}`, `(foo{baz="a"} @ end()) + bar{baz="a"}`)
 	f(`sum(foo @ end()) + bar{baz="a"}`, `sum(foo @ end()) + bar{baz="a"}`)

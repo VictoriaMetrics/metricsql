@@ -170,7 +170,7 @@ func TestPrettifySuccess(t *testing.T) {
 
 	// Verify long WITH expressions
 	another(`with (f(a)=foo{a,qw="ert"}, x = process_cpu_seconds_total{aaaaaaaaaaaaaaaaaaaaaaaaa="bbbb",cccccc="dddd",ppppppppppppppppppppppppp=~"xxxxxxx"}, y=f({ab="cde"}) + efg{h="j"}) x + sum(y)`,
-	`WITH (
+		`WITH (
   f(a) = foo{a,qw="ert"},
   x = (
     process_cpu_seconds_total{
@@ -185,7 +185,7 @@ x + sum(y)`)
 
 	// Embedded WITH expressions
 	another(`with ( x = (a{b="c"})  + (with (q=we{rt="z"}) q)) ((abc) / x) + (with(rt=234+234) 2*rt+ poasdfklkjlkjfdsfjklfdfdsfdsfddfsfd)`,
-	`WITH (
+		`WITH (
   x = a{b="c"} + WITH (q = we{rt="z"}) q,
 )
 (abc / x) + WITH (rt = 234 + 234) (2 * rt) + poasdfklkjlkjfdsfjklfdfdsfdsfddfsfd`)

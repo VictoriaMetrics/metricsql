@@ -94,6 +94,8 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 			return getCommonLabelFiltersForLabelDel(args)
 		case "label_keep":
 			return getCommonLabelFiltersForLabelKeep(args)
+		case "count_values_over_time":
+			return getCommonLabelFiltersForCountValuesOverTime(args)
 		case "range_normalize":
 			return intersectLabelFiltersForAllArgs(args)
 		default:
@@ -191,6 +193,14 @@ func intersectLabelFiltersForAllArgs(args []Expr) []LabelFilter {
 		lfs = intersectLabelFilters(lfs, lfsNext)
 	}
 	return lfs
+}
+
+func getCommonLabelFiltersForCountValuesOverTime(args []Expr) []LabelFilter {
+	if len(args) != 2 {
+		return nil
+	}
+	lfs := getCommonLabelFilters(args[1])
+	return dropLabelFiltersForLabelName(lfs, args[0])
 }
 
 func getCommonLabelFiltersForLabelKeep(args []Expr) []LabelFilter {
@@ -367,6 +377,8 @@ func pushdownBinaryOpFiltersInplace(lfs []LabelFilter, e Expr) {
 			pushdownLabelFiltersForLabelDel(lfs, args)
 		case "label_keep":
 			pushdownLabelFiltersForLabelKeep(lfs, args)
+		case "count_values_over_time":
+			pushdownLabelFiltersForCountValuesOverTime(lfs, args)
 		case "range_normalize":
 			pushdownLabelFiltersForAllArgs(lfs, args)
 		default:
@@ -402,6 +414,14 @@ func pushdownLabelFiltersForAllArgs(lfs []LabelFilter, args []Expr) {
 	for _, arg := range args {
 		pushdownBinaryOpFiltersInplace(lfs, arg)
 	}
+}
+
+func pushdownLabelFiltersForCountValuesOverTime(lfs []LabelFilter, args []Expr) {
+	if len(args) != 2 {
+		return
+	}
+	lfs = dropLabelFiltersForLabelName(lfs, args[0])
+	pushdownBinaryOpFiltersInplace(lfs, args[1])
 }
 
 func pushdownLabelFiltersForLabelKeep(lfs []LabelFilter, args []Expr) {
@@ -647,6 +667,8 @@ func canAcceptMultipleArgsForAggrFunc(funcName string) bool {
 func getRollupArgIdxForOptimization(funcName string, args []Expr) int {
 	// This must be kept in sync with GetRollupArgIdx()
 	switch strings.ToLower(funcName) {
+	case "count_values_over_time":
+		panic(fmt.Errorf("BUG: count_values_over_time must be already handled"))
 	case "absent_over_time":
 		return -1
 	case "quantile_over_time", "aggr_over_time",
