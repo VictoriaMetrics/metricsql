@@ -4,7 +4,7 @@
 
 # metricsql
 
-Package metricsql implements [MetricsQL](https://github.com/VictoriaMetrics/VictoriaMetrics/wiki/MetricsQL)
+Package metricsql implements [MetricsQL](https://godoc.org/github.com/VictoriaMetrics/metricsql)
 and [PromQL](https://medium.com/@valyala/promql-tutorial-for-beginners-9ab455142085) parser in Go.
 
 ### Usage
