@@ -62,7 +62,61 @@ func TestVisitAll(t *testing.T) {
 	f("1+2", "3,")
 	f("1+a", "1,a,(),(),1 + a,")
 	f("avg(a<b+1, sum(x) by (y))", "a,b,1,(),(),b + 1,(),(),a < (b + 1),x,by(y),sum(x) by(y),(),avg(a < (b + 1), sum(x) by(y)),")
-	f("x[1s]", "x,x[1s],")
+	f("x[1s]", "x,1s,x[1s],")
+	f("x[1h:5m] offset 5s @ 10s", "x,1h,5m,5s,10s,x[1h:5m] offset 5s @ 10s,")
+}
+
+func TestIsLikelyInvalid(t *testing.T) {
+	f := func(q string, resultExpected bool) {
+		t.Helper()
+
+		expr, err := Parse(q)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		result := IsLikelyInvalid(expr)
+		if result != resultExpected {
+			t.Fatalf("unexpected result for IsLikelyInvalid(%q); got %v; want %v", q, result, resultExpected)
+		}
+	}
+
+	f("1", false)
+	f(`foo{bar="baz"}`, false)
+
+	// This should be OK, since it is easy to reason about
+	f(`rate(foo)`, false)
+	f(`foo[5m]`, false)
+	f(`1 + foo[5m]`, false)
+
+	f(`rate(foo[5s])`, false)
+	f(`rate(foo{bar=~"baz"}[5s])`, false)
+	f(`rate(foo{bar=~"baz"}[5s] offset 1h)`, false)
+
+	// Explicit subqueries are allowed
+	f(`sum_over_time((up > 0)[5m:1s])`, false)
+	f(`rate(sum(foo)[5m])`, false)
+	f(`rate(sum(foo)[5m:3s])`, false)
+
+	// Implicit step in the subquery is OK
+	f(`sum_over_time((up > 0)[5m])`, false)
+
+	// This is OK, since it is supported by Prometheus
+	f(`rate(foo{bar=~"baz"}[5m:1s])`, false)
+	f(`rate(foo{bar=~"baz"}[5m:1s] offset 1h)`, false)
+
+	f(`sum(foo)`, false)
+	f(`sum(rate(foo))`, false)
+	f(`abs(foo)`, false)
+	f(`sum(abs(foo))`, false)
+
+	// This isn't OK, since these queries work unexpectedly most of the time
+	f(`rate(sum(foo))`, true)
+	f(`rate(abs(foo))`, true)
+	f(`rate(1)`, true)
+	f(`rate(foo + bar)`, true)
+	f(`rate(rate(foo))`, true)
+	f(`1 + rate(label_set(foo, "bar", "baz"))`, true)
+	f(`rate(sum(foo) offset 5m)`, true)
 }
 
 func TestIsSupportedFunction(t *testing.T) {
