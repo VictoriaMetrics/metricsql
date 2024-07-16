@@ -108,17 +108,17 @@ func Ifnot(left, right float64) float64 {
 	return nan
 }
 
-// And returns 1 if left and right is more than 0. Otherwise 0 is returned.
+// And returns 1 if left and right is not 0. Otherwise 0 is returned.
 func And(left, right float64) float64 {
-	if left > 0 && right > 0 {
+	if left != 0 && right != 0 {
 		return 1
 	}
 	return 0
 }
 
-// Or returns 1 if left or right is more than 0. Otherwise 0 is returned.
+// Or returns 1 if left or right is not 0. Otherwise 0 is returned.
 func Or(left, right float64) float64 {
-	if left > 0 || right > 0 {
+	if left != 0 || right != 0 {
 		return 1
 	}
 	return 0
