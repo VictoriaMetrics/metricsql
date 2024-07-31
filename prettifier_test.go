@@ -43,6 +43,7 @@ func TestPrettifyOkParseError(t *testing.T) {
 	}
 
 	f(`sum(rate{a="b"}[BAZ])`, `cannot expand WITH expressions: cannot parse window for rate{a="b"}: cannot find WITH template for "BAZ"`)
+	f(`WITH (ru(freev, maxv) = bad_func1(maxv - bad_func_2(freev, 0), 0) / clamp_min(maxv, 0) * 100) ru(1,2)`, `unsupported function "bad_func_2"`)
 }
 
 func TestPrettifySuccess(t *testing.T) {
