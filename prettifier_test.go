@@ -21,6 +21,31 @@ func TestPrettifyError(t *testing.T) {
 	f(`invalid query`)
 }
 
+func TestPrettifyOkParseError(t *testing.T) {
+	f := func(s string, wantErr string) {
+		t.Helper()
+
+		// check prettify ok
+		// it should not check query for semantic errors
+		result, err := Prettify(s)
+		if err != nil {
+			t.Fatalf("unexpected error when prettifying: %q: %s", s, err)
+		}
+
+		// Verify that the prettified result is failed to parse due to semantic error
+		_, err = Parse(result)
+		if err == nil {
+			t.Fatalf("expecting non-nil error")
+		}
+		if err.Error() != wantErr {
+			t.Fatalf("unexpected error string:\ngot:\n%q\nwant:\n%q", err, wantErr)
+		}
+	}
+
+	f(`sum(rate{a="b"}[BAZ])`, `cannot expand WITH expressions: cannot parse window for rate{a="b"}: cannot find WITH template for "BAZ"`)
+	f(`WITH (ru(freev, maxv) = bad_func1(maxv - bad_func_2(freev, 0), 0) / clamp_min(maxv, 0) * 100) ru(1,2)`, `unsupported function "bad_func_2"`)
+}
+
 func TestPrettifySuccess(t *testing.T) {
 	another := func(s, resultExpected string) {
 		t.Helper()
@@ -189,4 +214,6 @@ x + sum(y)`)
   x = a{b="c"} + WITH (q = we{rt="z"}) q,
 )
 (abc / x) + WITH (rt = 234 + 234) (2 * rt) + poasdfklkjlkjfdsfjklfdfdsfdsfddfsfd`)
+	another(`WITH(BAR=1m,x=sum(rate({a="b"}[BAR]))) x`, `WITH (BAR = 1m,x = sum(rate({a="b"}[BAR]))) x`)
+	same(`WITH (x = sum(rate({a="b"}[1m]))) x`)
 }
