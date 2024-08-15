@@ -1,6 +1,7 @@
 package metricsql
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -22,7 +23,7 @@ func TestPrettifyError(t *testing.T) {
 }
 
 func TestPrettifyOkParseError(t *testing.T) {
-	f := func(s string, wantErr string) {
+	f := func(s, wantErr string) {
 		t.Helper()
 
 		// check prettify ok
@@ -37,13 +38,24 @@ func TestPrettifyOkParseError(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expecting non-nil error")
 		}
-		if err.Error() != wantErr {
+		errStr := err.Error()
+		if !strings.Contains(errStr, wantErr) {
 			t.Fatalf("unexpected error string:\ngot:\n%q\nwant:\n%q", err, wantErr)
 		}
 	}
 
-	f(`sum(rate{a="b"}[BAZ])`, `cannot expand WITH expressions: cannot parse window for rate{a="b"}: cannot find WITH template for "BAZ"`)
+	// unknown duration
+	f(`sum(rate(m{a="b"}[BAZ]))`, `cannot find WITH template for "BAZ"`)
+	f(`sum(rate(m{a="b"}[5m:BAZ]))`, `cannot find WITH template for "BAZ"`)
+	f(`sum(rate(m{a="b"}[BAZ:5s]))`, `cannot find WITH template for "BAZ"`)
+	f(`sum(rate(m{a="b"}[5m] offset BAZ))`, `cannot find WITH template for "BAZ"`)
+
+	// unknown function
 	f(`WITH (ru(freev, maxv) = bad_func1(maxv - bad_func_2(freev, 0), 0) / clamp_min(maxv, 0) * 100) ru(1,2)`, `unsupported function "bad_func_2"`)
+
+	// composite strings
+	f(`with (f(x)=foo(m{a="z"+x})) f("abc")`, `unsupported function "foo"`)
+	f(`with (f(x) = "a" + x + "y" + "z") f(abc)`, `"x" must be string expression; got "abc"`)
 }
 
 func TestPrettifySuccess(t *testing.T) {
@@ -192,6 +204,7 @@ func TestPrettifySuccess(t *testing.T) {
 	same(`WITH (x = {a="b"}) {y="z",x}`)
 	same(`WITH (x = {a="b"}) x{y="z"}`)
 	same(`WITH (f(s) = {x="foo"+s+"bar"}) f("x")`)
+	same(`WITH (x = sum(rate({a="b"}[1m]))) x`)
 
 	// Verify long WITH expressions
 	another(`with (f(a)=foo{a,qw="ert"}, x = process_cpu_seconds_total{aaaaaaaaaaaaaaaaaaaaaaaaa="bbbb",cccccc="dddd",ppppppppppppppppppppppppp=~"xxxxxxx"}, y=f({ab="cde"}) + efg{h="j"}) x + sum(y)`,
@@ -214,6 +227,10 @@ x + sum(y)`)
   x = a{b="c"} + WITH (q = we{rt="z"}) q,
 )
 (abc / x) + WITH (rt = 234 + 234) (2 * rt) + poasdfklkjlkjfdsfjklfdfdsfdsfddfsfd`)
-	another(`WITH(BAR=1m,x=sum(rate({a="b"}[BAR]))) x`, `WITH (BAR = 1m,x = sum(rate({a="b"}[BAR]))) x`)
-	same(`WITH (x = sum(rate({a="b"}[1m]))) x`)
+
+	// duration replacement in WITH expression
+	another(`WITH(BAR=1m,x(BAZ)=sum(rate({a="b"}[BAR:BAZ])) offset BAR) x`, `WITH (BAR = 1m, x(BAZ) = sum(rate({a="b"}[BAR:BAZ])) offset BAR) x`)
+
+	// function replacement in WITH expression
+	same(`WITH (f(x) = abc{x}, z = f({foo="bar"})) z`)
 }

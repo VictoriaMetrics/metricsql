@@ -2009,7 +2009,7 @@ func (we *withExpr) AppendString(dst []byte) []byte {
 	for i, wa := range we.Was {
 		dst = wa.AppendString(dst)
 		if i+1 < len(we.Was) {
-			dst = append(dst, ',')
+			dst = append(dst, ", "...)
 		}
 	}
 	dst = append(dst, ") "...)
