@@ -921,6 +921,11 @@ func TestParseError(t *testing.T) {
 	f(`with (rate()=foobar) rate(x)`)
 	f(`with (x={y}) x`)
 
+	// with template with {lf1 or lf2} isn't supported
+	f(`with (f(x) = m{x}) f({a="b" or c="d"})`)
+	f(`with (f(x) = m{x or y="z"}) f({a="b" or c="d"})`)
+	f(`with (f(__name__) = {__name__}) f({a="b" or c="d"})`)
+
 	// Invalid number of args at ct()
 	f(`with (ct={job="test", i="bar"}) ct + {ct, x="d"} + foo{ct, ct} + ct(1)`)
 
