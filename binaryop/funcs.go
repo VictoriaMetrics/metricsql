@@ -120,8 +120,6 @@ func And(left, right float64) float64 {
 func Or(left, right float64) float64 {
 	if !math.IsNaN(left) {
 		return left
-	} else if !math.IsNaN(right) {
-		return right
 	}
-	return nan
+	return right
 }
