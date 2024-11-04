@@ -76,6 +76,9 @@ func Mod(left, right float64) float64 {
 
 // Pow returns pow(left, right)
 func Pow(left, right float64) float64 {
+	if math.IsNaN(left) {
+		return nan
+	}
 	return math.Pow(left, right)
 }
 
