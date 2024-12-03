@@ -595,6 +595,7 @@ func TestDurationSuccess(t *testing.T) {
 	// Integer durations
 	f("123ms", 42, 123)
 	f("-123ms", 42, -123)
+	f("4236579305ms", 42, 4236579305)
 	f("123s", 42, 123*1000)
 	f("-123s", 42, -123*1000)
 	f("123m", 42, 123*60*1000)
