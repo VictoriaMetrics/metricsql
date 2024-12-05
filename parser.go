@@ -13,6 +13,19 @@ import (
 //
 // MetricsQL is backwards-compatible with PromQL.
 func Parse(s string) (Expr, error) {
+	e, err := ParseRaw(s)
+	if err != nil {
+		return nil, err
+	}
+	e = removeParensExpr(e)
+	e = simplifyConstants(e)
+	if err := checkSupportedFunctions(e); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+func ParseRaw(s string) (Expr, error) {
 	// Parse s
 	e, err := parseInternal(s)
 	if err != nil {
@@ -23,11 +36,6 @@ func Parse(s string) (Expr, error) {
 	was := getDefaultWithArgExprs()
 	if e, err = expandWithExpr(was, e); err != nil {
 		return nil, fmt.Errorf(`cannot expand WITH expressions: %s`, err)
-	}
-	e = removeParensExpr(e)
-	e = simplifyConstants(e)
-	if err := checkSupportedFunctions(e); err != nil {
-		return nil, err
 	}
 	return e, nil
 }
