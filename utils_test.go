@@ -117,6 +117,9 @@ func TestIsLikelyInvalid(t *testing.T) {
 	f(`rate(rate(foo))`, true)
 	f(`1 + rate(label_set(foo, "bar", "baz"))`, true)
 	f(`rate(sum(foo) offset 5m)`, true)
+
+	// invalid number of args
+	f(`quantile_over_time(foo)`, false)
 }
 
 func TestIsSupportedFunction(t *testing.T) {
