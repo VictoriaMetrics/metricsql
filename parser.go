@@ -1350,10 +1350,16 @@ func (p *parser) parseLabelFilters(mf *labelFilterExpr) ([]*labelFilterExpr, err
 func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
 	// Strip quotes if they exist
 	if isStringPrefix(p.lex.Token) {
-		p.lex.Token = p.lex.Token[1 : len(p.lex.Token)-1]
-	}
-	if !isIdentPrefix(p.lex.Token) {
-		return nil, fmt.Errorf(`labelFilterExpr: unexpected token %q; want "ident"`, p.lex.Token)
+		end := len(p.lex.Token) - 1
+		if isStringPrefix(p.lex.Token[end:]) {
+			newToken := p.lex.Token[1:end]
+			fmt.Printf("string removed old token: %s new token %s\n", p.lex.Token, newToken)
+			p.lex.Token = newToken
+		}
+	} else {
+		if !isIdentPrefix(p.lex.Token) {
+			return nil, fmt.Errorf(`labelFilterExpr: unexpected token %q; want "ident"`, p.lex.Token)
+		}
 	}
 	var lfe labelFilterExpr
 	lfe.Label = unescapeIdent(p.lex.Token)
