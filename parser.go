@@ -1348,6 +1348,10 @@ func (p *parser) parseLabelFilters(mf *labelFilterExpr) ([]*labelFilterExpr, err
 }
 
 func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
+	// Strip quotes if they exist
+	if isStringPrefix(p.lex.Token) {
+		p.lex.Token = p.lex.Token[1 : len(p.lex.Token)-1]
+	}
 	if !isIdentPrefix(p.lex.Token) {
 		return nil, fmt.Errorf(`labelFilterExpr: unexpected token %q; want "ident"`, p.lex.Token)
 	}
