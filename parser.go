@@ -887,12 +887,12 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 					lfeNew.IsNegative = lfe.IsNegative
 					lfeNew.IsRegexp = lfe.IsRegexp
 					lf, err := lfeNew.toLabelFilter()
+					if err != nil {
+						return nil, err
+					}
 					if lf.isMetricNameFilter() {
 						metricName = lf.Value
 						continue
-					}
-					if err != nil {
-						return nil, err
 					}
 					lfsNew = append(lfsNew, *lf)
 				}
