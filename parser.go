@@ -833,9 +833,12 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 			// Already expanded.
 			return t, nil
 		}
+		metricName := ""
 		{
 			var me MetricExpr
 			// Populate me.LabelFilterss
+			// Check to see if name is set in the first labelFilter
+
 			for _, lfes := range t.labelFilterss {
 				var lfsNew []LabelFilter
 				for _, lfe := range lfes {
@@ -843,6 +846,12 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 						// Expand lfe.Label into lfsNew.
 						wa := getWithArgExpr(was, lfe.Label)
 						if wa == nil {
+							if lfe.IsPossibleMetricName {
+								if metricName == "" {
+									metricName = lfe.Label
+									continue
+								}
+							}
 							return nil, fmt.Errorf("cannot find WITH template for %q inside %q", lfe.Label, t.AppendString(nil))
 						}
 						eNew, err := expandWithExprExt(was, wa, []Expr{})
@@ -867,7 +876,6 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 						}
 						continue
 					}
-
 					// convert lfe to LabelFilter.
 					se, err := expandWithExpr(was, lfe.Value)
 					if err != nil {
@@ -879,6 +887,10 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 					lfeNew.IsNegative = lfe.IsNegative
 					lfeNew.IsRegexp = lfe.IsRegexp
 					lf, err := lfeNew.toLabelFilter()
+					if lf.isMetricNameFilter() {
+						metricName = lf.Value
+						continue
+					}
 					if err != nil {
 						return nil, err
 					}
@@ -887,9 +899,25 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 				lfsNew = removeDuplicateLabelFilters(lfsNew)
 				me.LabelFilterss = append(me.LabelFilterss, lfsNew)
 			}
+			// Prepend metric name to latest
+			if metricName != "" {
+				lfesCount := len(t.labelFilterss)
+				for i := 1; i <= lfesCount; i++ {
+					lfsLastIndex := len(me.LabelFilterss) - i
+					var lfsNew []LabelFilter
+					var lfNew LabelFilter
+					lfNew.Label = "__name__"
+					lfNew.Value = metricName
+					lfNew.IsNegative = false
+					lfNew.IsRegexp = false
+					lfsNew = append(lfsNew, lfNew)
+					lfsNew = append(lfsNew, me.LabelFilterss[lfsLastIndex]...)
+					me.LabelFilterss[lfsLastIndex] = lfsNew
+				}
+			}
 			t = &me
 		}
-		metricName := t.getMetricName()
+		//metricName := t.getMetricName()
 		if metricName == "" {
 			return t, nil
 		}
@@ -1353,7 +1381,6 @@ func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
 		end := len(p.lex.Token) - 1
 		if isStringPrefix(p.lex.Token[end:]) {
 			newToken := p.lex.Token[1:end]
-			fmt.Printf("string removed old token: %s new token %s\n", p.lex.Token, newToken)
 			p.lex.Token = newToken
 		}
 	} else {
@@ -1385,6 +1412,7 @@ func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
 		//   - {lf or other="filter"}
 		//
 		// It must be substituted by complete label filter during WITH template expand.
+		lfe.IsPossibleMetricName = true
 		return &lfe, nil
 	default:
 		return nil, fmt.Errorf(`labelFilterExpr: unexpected token %q; want "=", "!=", "=~", "!~", ",", "or", "}"`, p.lex.Token)
@@ -1411,8 +1439,9 @@ type labelFilterExpr struct {
 	// Value can be nil if Label contains unexpanded WITH template reference.
 	Value *StringExpr
 
-	IsRegexp   bool
-	IsNegative bool
+	IsRegexp             bool
+	IsNegative           bool
+	IsPossibleMetricName bool
 }
 
 func (lfe *labelFilterExpr) AppendString(dst []byte) []byte {

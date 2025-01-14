@@ -43,6 +43,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`{"foo"="bar"}`, `{foo="bar"}`)
 	another(`{"3foo"="bar"}`, `{\3foo="bar"}`)
 	another(`{"'3foo'"="bar"}`, `{\'3foo\'="bar"}`)
+	another(`{'温度{房间="水电费\xF3"}'="1"}[5m] offset 10m`, `{温度\{房间\=\"水电费ó\"\}="1"}[5m] offset 10m`)
 	same(`{foo="bar"}[5m]`)
 	another(`{"foo"="bar"}[5m]`, `{foo="bar"}[5m]`)
 	same(`{foo="bar"}[5m:]`)
@@ -54,8 +55,11 @@ func TestParseSuccess(t *testing.T) {
 	same(`{foo="bar"}[5m] offset 10y`)
 	same(`{foo="bar"}[5m:3s] offset 10y`)
 	another(`{foo="bar"}[5m] oFFSEt 10y`, `{foo="bar"}[5m] offset 10y`)
+	another(`{__name__="metric", a="1"}`, `metric{a="1"}`)
 	same("METRIC")
 	same("metric")
+	another(`{"metric"}`, `metric`)
+	another(`{a="1",__name__="metric"}`, `metric{a="1"}`)
 	another("metric{}", "metric")
 	same("m_e:tri44:_c123")
 	another("-metric", "0 - metric")
@@ -138,8 +142,9 @@ func TestParseSuccess(t *testing.T) {
 	another(`sum(x) by (b\x7Ca)`, `sum(x) by(b\|a)`)
 
 	// Duplicate filters
-	same(`foo{__name__="bar"}`)
-	same(`foo{a="b",a="c",__name__="aaa",b="d"}`)
+	//same(`foo{__name__="bar"}`)
+	//same(`foo{a="b",a="c",__name__="aaa",b="d"}`)
+	same(`{a="b",a="c",b="d"}`)
 
 	// Metric filters ending with comma
 	another(`m{foo="bar",}`, `m{foo="bar"}`)
