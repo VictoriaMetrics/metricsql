@@ -837,7 +837,6 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 		{
 			var me MetricExpr
 			// Populate me.LabelFilterss
-			// Check to see if name is set in the first labelFilter
 
 			for _, lfes := range t.labelFilterss {
 				var lfsNew []LabelFilter
@@ -846,6 +845,9 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 						// Expand lfe.Label into lfsNew.
 						wa := getWithArgExpr(was, lfe.Label)
 						if wa == nil {
+							// Check to see if this is a possible metric name
+							// This means label name set and starts and ends with quotes
+							// but value is nil
 							if lfe.IsPossibleMetricName {
 								if metricName == "" {
 									metricName = lfe.Label
@@ -1415,9 +1417,9 @@ func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
 		//   - {lf or other="filter"}
 		//
 		// It must be substituted by complete label filter during WITH template expand.
-		// If we have a label name that is quoted it is possible it's the metric name as per
-		// Prometheus 3.0 UTF8 quoted label names specifications, this is used later in our
-		// expanding of the with statements
+		// If we have a label name that is quoted with a nil value it is possible it's the metric
+		// name as per Prometheus 3.0 UTF8 quoted label names specifications, this is used later
+		// in our expanding of the with statements
 		lfe.IsPossibleMetricName = isPossibleMetricName
 
 		return &lfe, nil
