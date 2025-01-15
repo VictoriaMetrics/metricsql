@@ -1376,12 +1376,15 @@ func (p *parser) parseLabelFilters(mf *labelFilterExpr) ([]*labelFilterExpr, err
 }
 
 func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
+	var isPossibleMetricName bool
+
 	// Strip quotes if they exist
 	if isStringPrefix(p.lex.Token) {
 		end := len(p.lex.Token) - 1
 		if isStringPrefix(p.lex.Token[end:]) {
 			newToken := p.lex.Token[1:end]
 			p.lex.Token = newToken
+			isPossibleMetricName = true
 		}
 	} else {
 		if !isIdentPrefix(p.lex.Token) {
@@ -1412,7 +1415,11 @@ func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
 		//   - {lf or other="filter"}
 		//
 		// It must be substituted by complete label filter during WITH template expand.
-		lfe.IsPossibleMetricName = true
+		// If we have a label name that is quoted it is possible it's the metric name as per
+		// Prometheus 3.0 UTF8 quoted label names specifications, this is used later in our
+		// expanding of the with statements
+		lfe.IsPossibleMetricName = isPossibleMetricName
+
 		return &lfe, nil
 	default:
 		return nil, fmt.Errorf(`labelFilterExpr: unexpected token %q; want "=", "!=", "=~", "!~", ",", "or", "}"`, p.lex.Token)
