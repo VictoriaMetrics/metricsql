@@ -584,6 +584,10 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (rate(a) = b) c`, `c`)
 	another(`rate(x) + with (rate(a,b)=a*b) rate(2,b)`, `rate(x) + (2 * b)`)
 	another(`with (sum(a,b)=a+b) sum(c,d)`, `c + d`)
+
+	// $__interval and $__rate_interval must be replaced with 1i
+	another(`rate(m[$__interval] offset $__interval) * $__rate_interval`, `rate(m[1i] offset 1i) * 1i`)
+	another(`increase(m[$__rate_interval])`, `increase(m[1i])`)
 }
 
 func TestParseError(t *testing.T) {
