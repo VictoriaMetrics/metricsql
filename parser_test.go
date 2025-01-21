@@ -665,6 +665,10 @@ func TestParseError(t *testing.T) {
 	f(`foo{foo="ba}`)
 	// No longer invalid with Prometheus 3.0 quoted label names
 	//f(`foo{"foo"="bar"}`)
+	// Test if two metric names are set
+	f(`foo{"foo"}`)
+	f(`{"foo", "a"="1", "bar"}`)
+	f(`{"foo", __name__="bar"}`)
 	f(`foo{$`)
 	f(`foo{a $`)
 	f(`foo{a="b",$`)

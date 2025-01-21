@@ -852,6 +852,8 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 								if metricName == "" {
 									metricName = lfe.Label
 									continue
+								} else {
+									return nil, fmt.Errorf("parse error: metric name must not be set twice: %q or %q", metricName, lfe.Label)
 								}
 							}
 							return nil, fmt.Errorf("cannot find WITH template for %q inside %q", lfe.Label, t.AppendString(nil))
@@ -893,6 +895,9 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 						return nil, err
 					}
 					if lf.isMetricNameFilter() {
+						if metricName != "" && metricName != lf.Value {
+							return nil, fmt.Errorf("parse error: metric name must not be set twice: %q or %q", metricName, lf.Value)
+						}
 						metricName = lf.Value
 						continue
 					}
