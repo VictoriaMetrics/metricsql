@@ -924,7 +924,6 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 			}
 			t = &me
 		}
-		//metricName := t.getMetricName()
 		if metricName == "" {
 			return t, nil
 		}
