@@ -70,6 +70,8 @@ func TestParseSuccess(t *testing.T) {
 	another(`{"metric", "a"="1"}`, `metric{a="1"}`)
 	same("METRIC")
 	same("metric")
+	another(`metric{"metric"}`, "metric")
+	another(`metric{__name__="metric"}`, "metric")
 	another(`{"metric"}`, `metric`)
 	another(`{a="1",__name__="metric"}`, `metric{a="1"}`)
 	another("metric{}", "metric")
@@ -666,7 +668,6 @@ func TestParseError(t *testing.T) {
 	// No longer invalid with Prometheus 3.0 quoted label names
 	//f(`foo{"foo"="bar"}`)
 	// Test if two metric names are set
-	f(`foo{"foo"}`)
 	f(`{"foo", "a"="1", "bar"}`)
 	f(`{"foo", __name__="bar"}`)
 	f(`foo{$`)

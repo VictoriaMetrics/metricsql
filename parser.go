@@ -853,7 +853,10 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 									metricName = lfe.Label
 									continue
 								} else {
-									return nil, fmt.Errorf("parse error: metric name must not be set twice: %q or %q", metricName, lfe.Label)
+									if metricName != lfe.Label {
+										return nil, fmt.Errorf("parse error: metric name must not be set twice: %q or %q", metricName, lfe.Label)
+									}
+									continue
 								}
 							}
 							return nil, fmt.Errorf("cannot find WITH template for %q inside %q", lfe.Label, t.AppendString(nil))
@@ -1381,17 +1384,20 @@ func (p *parser) parseLabelFilters(mf *labelFilterExpr) ([]*labelFilterExpr, err
 	}
 }
 
+func isQuotedString(s string) bool {
+	if isStringPrefix(s) && isStringPrefix(s[len(s)-1:]) {
+		return true
+	}
+	return false
+}
+
 func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
 	var isPossibleMetricName bool
 
 	// Strip quotes if they exist
-	if isStringPrefix(p.lex.Token) {
-		end := len(p.lex.Token) - 1
-		if isStringPrefix(p.lex.Token[end:]) {
-			newToken := p.lex.Token[1:end]
-			p.lex.Token = newToken
-			isPossibleMetricName = true
-		}
+	if isQuotedString(p.lex.Token) {
+		p.lex.Token = p.lex.Token[1 : len(p.lex.Token)-1]
+		isPossibleMetricName = true
 	} else {
 		if !isIdentPrefix(p.lex.Token) {
 			return nil, fmt.Errorf(`labelFilterExpr: unexpected token %q; want "ident"`, p.lex.Token)
