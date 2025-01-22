@@ -2221,7 +2221,7 @@ type LabelFilter struct {
 
 // AppendString appends string representation of me to dst and returns the result.
 func (lf *LabelFilter) AppendString(dst []byte) []byte {
-	dst = appendEscapedIdent(dst, lf.Label)
+	dst = appendQuotedIdent(dst, lf.Label)
 	dst = appendLabelFilterOp(dst, lf.IsNegative, lf.IsRegexp)
 	dst = strconv.AppendQuote(dst, lf.Value)
 	return dst

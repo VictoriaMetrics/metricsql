@@ -387,6 +387,16 @@ func unescapeIdent(s string) string {
 	}
 }
 
+func appendQuotedIdent(dst []byte, s string) []byte {
+	i := 0
+	for i < len(s) {
+		r, size := utf8.DecodeRuneInString(s[i:])
+		dst = utf8.AppendRune(dst, r)
+		i += size
+	}
+	return dst
+}
+
 func appendEscapedIdent(dst []byte, s string) []byte {
 	i := 0
 	for i < len(s) {

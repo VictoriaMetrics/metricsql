@@ -42,9 +42,9 @@ func TestParseSuccess(t *testing.T) {
 	same(`{foo="bar"}`)
 	another(`{"foo"="bar"}`, `{foo="bar"}`)
 	another(`{"foo"="bAR"}`, `{foo="bAR"}`)
-	another(`{"3foo"="bar"}`, `{\3foo="bar"}`)
-	another(`{"'3foo'"="bar"}`, `{\'3foo\'="bar"}`)
-	another(`{'温度{房间="水电费\xF3"}'="1"}[5m] offset 10m`, `{温度\{房间\=\"水电费ó\"\}="1"}[5m] offset 10m`)
+	another(`{"3foo"="bar"}`, `{3foo="bar"}`)
+	another(`{"'3foo'"="bar"}`, `{'3foo'="bar"}`)
+	another(`{'温度{房间="水电费\xF3"}'="1"}[5m] offset 10m`, `{温度{房间="水电费ó"}="1"}[5m] offset 10m`)
 	same(`{foo="bar"}[5m]`)
 	another(`{"foo"="bar"}[5m]`, `{foo="bar"}[5m]`)
 	same(`{foo="bar"}[5m:]`)
@@ -171,7 +171,7 @@ func TestParseSuccess(t *testing.T) {
 
 	// identifiers with with escape chars
 	same(`foo\ bar`)
-	same(`foo\-bar\{{baz\+bar="aa"}`)
+	another(`foo\-bar\{{baz\+bar="aa"}`, `foo\-bar\{{baz+bar="aa"}`)
 	another(`\x2E\x2ef\oo{b\xEF\ar="aa"}`, `\..foo{bïar="aa"}`)
 	same(`温度{房间="水电费"}[5m] offset 10m`)
 	another(`\温\度{\房\间="水电费"}[5m] offset 10m`, `温度{房间="水电费"}[5m] offset 10m`)
