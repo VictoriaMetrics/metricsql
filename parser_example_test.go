@@ -8,7 +8,7 @@ import (
 )
 
 func ExampleParse() {
-	expr, err := metricsql.Parse(`sum(rate({"foo", bar="baz"}[5m])) by (x,y)`)
+	expr, err := metricsql.Parse(`sum(rate(foo{bar="baz"}[5m])) by (x,y)`)
 	if err != nil {
 		log.Fatalf("parse error: %s", err)
 	}
