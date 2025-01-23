@@ -179,8 +179,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`sum(x) by (b\x7Ca)`, `sum(x) by(b\|a)`)
 
 	// Duplicate filters
-	//same(`foo{__name__="bar"}`)
-	//same(`foo{a="b",a="c",__name__="aaa",b="d"}`)
+	same(`foo{a="b",a="c",b="d"}`)
 	same(`{a="b",a="c",b="d"}`)
 
 	// Metric filters ending with comma
