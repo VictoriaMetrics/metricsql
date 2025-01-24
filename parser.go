@@ -918,8 +918,6 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 					var lfNew LabelFilter
 					lfNew.Label = "__name__"
 					lfNew.Value = metricName
-					lfNew.IsNegative = false
-					lfNew.IsRegexp = false
 					lfsNew = append(lfsNew, lfNew)
 					lfsNew = append(lfsNew, me.LabelFilterss[lfsLastIndex]...)
 					me.LabelFilterss[lfsLastIndex] = lfsNew
@@ -1393,16 +1391,15 @@ func isQuotedString(s string) bool {
 
 func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
 	var isPossibleMetricName bool
-
-	// Strip quotes if they exist
 	if isQuotedString(p.lex.Token) {
+		// strip quotes
 		p.lex.Token = p.lex.Token[1 : len(p.lex.Token)-1]
+		// quoted string could be a metric name: {"metric_name"}
 		isPossibleMetricName = true
-	} else {
-		if !isIdentPrefix(p.lex.Token) {
-			return nil, fmt.Errorf(`labelFilterExpr: unexpected token %q; want "ident"`, p.lex.Token)
-		}
+	} else if !isIdentPrefix(p.lex.Token) {
+		return nil, fmt.Errorf(`labelFilterExpr: unexpected token %q; want "ident"`, p.lex.Token)
 	}
+
 	var lfe labelFilterExpr
 	lfe.Label = unescapeIdent(p.lex.Token)
 	if err := p.lex.Next(); err != nil {
@@ -1430,6 +1427,7 @@ func (p *parser) parseLabelFilterExpr() (*labelFilterExpr, error) {
 		// If we have a label name that is quoted with a nil value it is possible it's the metric
 		// name as per Prometheus 3.0 UTF8 quoted label names specifications, this is used later
 		// in our expanding of the with statements
+		// https://github.com/prometheus/proposals/blob/main/proposals/2023-08-21-utf8.md
 		lfe.IsPossibleMetricName = isPossibleMetricName
 
 		return &lfe, nil
