@@ -274,7 +274,8 @@ func TestOptimize(t *testing.T) {
 
 	// label_set
 	f(`label_set(foo, "__name__", "bar") + x`, `label_set(foo, "__name__", "bar") + x`)
-	f(`label_set(foo, "a", "bar") + x{__name__="y"}`, `label_set(foo, "a", "bar") + x{__name__="y",a="bar"}`)
+	// No longer a valid test due to errors on two metric names being set
+	//	f(`label_set(foo, "a", "bar") + x{__name__="y"}`, `label_set(foo, "a", "bar") + x{__name__="y",a="bar"}`)
 	f(`label_set(foo{bar="baz"}, "xx", "y") + a{x="y"}`, `label_set(foo{bar="baz",x="y"}, "xx", "y") + a{bar="baz",x="y",xx="y"}`)
 	f(`label_set(foo{x="y"}, "q", "b", "x", "qwe") + label_set(bar{q="w"}, "x", "a", "q", "w")`, `label_set(foo{x="y"}, "q", "b", "x", "qwe") + label_set(bar{q="w"}, "x", "a", "q", "w")`)
 	f(`label_set(foo{a="b"}, "a", "qwe") + bar{a="x"}`, `label_set(foo{a="b"}, "a", "qwe") + bar{a="qwe",a="x"}`)
