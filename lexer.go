@@ -410,7 +410,7 @@ func hasEscapedChars(s string) bool {
 	}
 	return false
 }
-func fEscapedCharsAppendQuotedIdent(dst []byte, s string) []byte {
+func ifEscapedCharsAppendQuotedIdent(dst []byte, s string) []byte {
 	if hasEscapedChars(s) {
 		dst = utf8.AppendRune(dst, '"')
 		for i := 0; i < len(s); {
