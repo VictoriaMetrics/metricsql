@@ -124,6 +124,19 @@ func TestPrettifySuccess(t *testing.T) {
 		`process_cpu_seconds_total{
   foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"
 }`)
+	another(`process_cpu_seconds_total{"3foo"="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"}`,
+		`process_cpu_seconds_total{
+  "3foo"="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"
+}`)
+	another(`{"process_cpu_seconds_total", "foo"="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"}`,
+		`process_cpu_seconds_total{
+  foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"
+}`)
+	another(`{"3process_cpu_seconds_total", "foo"="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"}`,
+		`{
+"3process_cpu_seconds_total", 
+  foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"
+}`)
 	another(`process_cpu_seconds_total{foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk",very_long_label_aaaaaaaaaaaaaaa="fdsfdsffdsfs"}`,
 		`process_cpu_seconds_total{
   foo="bar",
