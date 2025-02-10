@@ -171,6 +171,16 @@ func TestPrettifySuccess(t *testing.T) {
   sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]) keep_metric_names)
 ) keep_metric_names`)
 
+	another(`(sum(rate({"3process_cpu_seconds_total", instance="foo",job="bar"}[5m] offset 1h @ start())) by (x) / on(x) group_right(y) prefix "x" sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]) keep_metric_names)) keep_metric_names`,
+		`(
+  sum(
+    rate(
+      {"3process_cpu_seconds_total", instance="foo",job="bar"}[5m] offset 1h @ start()
+    )
+  ) by(x)
+    / on(x) group_right(y) prefix "x"
+  sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]) keep_metric_names)
+) keep_metric_names`)
 	another(`process_cpu_seconds_total{aaaaaaaaaaaaaaaaaa="bbbbbb"} offset 5m + (rate(xxxxxxxxxxxxxxxx{yyyyyyyy="aaaaaaa"}) keep_metric_names)`,
 		`(process_cpu_seconds_total{aaaaaaaaaaaaaaaaaa="bbbbbb"} offset 5m)
   +
