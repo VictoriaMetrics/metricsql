@@ -101,7 +101,16 @@ func TestPrettifySuccess(t *testing.T) {
 
 	// Verify that short queries remain single-line
 	same(`foo`)
+	another(`{"foo"}`, "foo")
+	another(`{"3foo"}`, `{"3foo"}`)
+	another(`{"foo", bar="baz"}`, `foo{bar="baz"}`)
+	another(`{"foo", "bar"="baz"}`, `foo{bar="baz"}`)
 	same(`foo{bar="baz"}`)
+	another(`foo{"3bar"="baz"}`, `foo{"3bar"="baz"}`)
+	another(`foo{"bar3"="baz"}`, `foo{bar3="baz"}`)
+	same(`"metr\"ic"`)
+	same(`'metr"ic'`)
+	same(`{"3foo", bar="baz"}`)
 	same(`foo{bar="baz",x="y" or q="w",r="t"}`)
 	same(`foo{bar="baz"} + rate(x{y="x"}[5m] offset 1h)`)
 

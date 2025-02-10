@@ -399,6 +399,30 @@ func unescapeIdent(s string) string {
 	}
 }
 
+func hasEscapedChars(s string) bool {
+	i := 0
+	for i < len(s) {
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if i == 0 && !isFirstIdentChar(r) || i > 0 && !isIdentChar(r) {
+			return true
+		}
+		i += size
+	}
+	return false
+}
+func fEscapedCharsAppendQuotedIdent(dst []byte, s string) []byte {
+	if hasEscapedChars(s) {
+		dst = utf8.AppendRune(dst, '"')
+		for i := 0; i < len(s); {
+			r, size := utf8.DecodeRuneInString(s[i:])
+			dst = utf8.AppendRune(dst, r)
+			i += size
+		}
+		dst = utf8.AppendRune(dst, '"')
+		return dst
+	}
+	return appendEscapedIdent(dst, s)
+}
 func appendEscapedIdent(dst []byte, s string) []byte {
 	i := 0
 	for i < len(s) {
