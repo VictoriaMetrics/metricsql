@@ -106,7 +106,7 @@ func TestPrettifySuccess(t *testing.T) {
 	another(`{"foo", bar="baz"}`, `foo{bar="baz"}`)
 	another(`{"foo", "bar"="baz"}`, `foo{bar="baz"}`)
 	same(`foo{bar="baz"}`)
-	another(`foo{"3bar"="baz"}`, `foo{"3bar"="baz"}`)
+	same(`foo{"3bar"="baz"}`)
 	another(`foo{"bar3"="baz"}`, `foo{bar3="baz"}`)
 	same(`"metr\"ic"`)
 	same(`'metr"ic'`)
