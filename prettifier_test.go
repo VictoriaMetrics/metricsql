@@ -101,7 +101,16 @@ func TestPrettifySuccess(t *testing.T) {
 
 	// Verify that short queries remain single-line
 	same(`foo`)
+	another(`{"foo"}`, "foo")
+	another(`{"3foo"}`, `{"3foo"}`)
+	another(`{"foo", bar="baz"}`, `foo{bar="baz"}`)
+	another(`{"foo", "bar"="baz"}`, `foo{bar="baz"}`)
 	same(`foo{bar="baz"}`)
+	same(`foo{"3bar"="baz"}`)
+	another(`foo{"bar3"="baz"}`, `foo{bar3="baz"}`)
+	same(`"metr\"ic"`)
+	same(`'metr"ic'`)
+	same(`{"3foo", bar="baz"}`)
 	same(`foo{bar="baz",x="y" or q="w",r="t"}`)
 	same(`foo{bar="baz"} + rate(x{y="x"}[5m] offset 1h)`)
 
@@ -113,6 +122,19 @@ func TestPrettifySuccess(t *testing.T) {
 	// Verify that long label filters are split into multiple lines
 	another(`process_cpu_seconds_total{foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"}`,
 		`process_cpu_seconds_total{
+  foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"
+}`)
+	another(`process_cpu_seconds_total{"3foo"="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"}`,
+		`process_cpu_seconds_total{
+  "3foo"="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"
+}`)
+	another(`{"process_cpu_seconds_total", "foo"="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"}`,
+		`process_cpu_seconds_total{
+  foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"
+}`)
+	another(`{"3process_cpu_seconds_total", "foo"="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"}`,
+		`{
+"3process_cpu_seconds_total", 
   foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk"
 }`)
 	another(`process_cpu_seconds_total{foo="bar",xjljljlkjopiwererrewre="asdfdsfdsfsdfdsfjkljlk",very_long_label_aaaaaaaaaaaaaaa="fdsfdsffdsfs"}`,
@@ -149,6 +171,16 @@ func TestPrettifySuccess(t *testing.T) {
   sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]) keep_metric_names)
 ) keep_metric_names`)
 
+	another(`(sum(rate({"3process_cpu_seconds_total", instance="foo",job="bar"}[5m] offset 1h @ start())) by (x) / on(x) group_right(y) prefix "x" sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]) keep_metric_names)) keep_metric_names`,
+		`(
+  sum(
+    rate(
+      {"3process_cpu_seconds_total", instance="foo",job="bar"}[5m] offset 1h @ start()
+    )
+  ) by(x)
+    / on(x) group_right(y) prefix "x"
+  sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]) keep_metric_names)
+) keep_metric_names`)
 	another(`process_cpu_seconds_total{aaaaaaaaaaaaaaaaaa="bbbbbb"} offset 5m + (rate(xxxxxxxxxxxxxxxx{yyyyyyyy="aaaaaaa"}) keep_metric_names)`,
 		`(process_cpu_seconds_total{aaaaaaaaaaaaaaaaaa="bbbbbb"} offset 5m)
   +
