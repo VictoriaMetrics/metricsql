@@ -191,6 +191,7 @@ func TestOptimize(t *testing.T) {
 	f(`a + on(x) group_left(*) (prefix{x="a"})`, `a{x="a"} + on(x) group_left(*) (prefix{x="a"})`)
 	f(`a + on(x) group_right(*) prefix "foo_" b{x="a"}`, `a{x="a"} + on(x) group_right(*) prefix "foo_" b{x="a"}`)
 	f(`a{x="a"} + on(x) group_right(*) prefix "foo_" prefix`, `a{x="a"} + on(x) group_right(*) prefix "foo_" (prefix{x="a"})`)
+	f(`foo{a="a"} ifnot foo{b="b"}`, `foo{a="a"} ifnot foo{a="a",b="b"}`)
 
 	// specially handled binary expressions
 	f(`foo{a="b"} or bar{x="y"}`, `foo{a="b"} or bar{x="y"}`)
