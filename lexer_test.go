@@ -504,14 +504,14 @@ func testLexerError(t *testing.T, s string) {
 }
 
 func TestPositiveDurationSuccess(t *testing.T) {
-	f := func(s string, step, expectedD int64) {
+	f := func(s string, step, dExpected int64) {
 		t.Helper()
 		d, err := PositiveDurationValue(s, step)
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
 		}
-		if d != expectedD {
-			t.Fatalf("unexpected duration; got %d; want %d", d, expectedD)
+		if d != dExpected {
+			t.Fatalf("unexpected duration; got %d; want %d", d, dExpected)
 		}
 	}
 
@@ -549,6 +549,10 @@ func TestPositiveDurationSuccess(t *testing.T) {
 	f("1H", 45, 1*60*60*1000)
 	f("1D", 45, 1*24*60*60*1000)
 	f("1Y", 45, 1*365*24*60*60*1000)
+
+	// Too big duration
+	f("10000000000y", 0, math.MaxInt64)
+	f("922335359011637780i", 5*3600*1000, math.MaxInt64)
 }
 
 func TestPositiveDurationError(t *testing.T) {
@@ -572,23 +576,20 @@ func TestPositiveDurationError(t *testing.T) {
 	f("1mi")
 	f("1mb")
 
-	// Too big duration
-	f("10000000000y")
-
 	// Uppercase M isn't a duration, but a 1e6 multiplier.
 	// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/3664
 	f("1M")
 }
 
 func TestDurationSuccess(t *testing.T) {
-	f := func(s string, step, expectedD int64) {
+	f := func(s string, step, dExpected int64) {
 		t.Helper()
 		d, err := DurationValue(s, step)
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
 		}
-		if d != expectedD {
-			t.Fatalf("unexpected duration; got %d; want %d", d, expectedD)
+		if d != dExpected {
+			t.Fatalf("unexpected duration; got %d; want %d", d, dExpected)
 		}
 	}
 
@@ -641,6 +642,14 @@ func TestDurationSuccess(t *testing.T) {
 	f("-3.H", 10, -3*60*60*1000)
 	f("1D", 10, 1*24*60*60*1000)
 	f("-.1Y", 10, -0.1*365*24*60*60*1000)
+
+	// Too big duration
+	f("10000000000y", 0, math.MaxInt64)
+	f("922335359011637780i", 5*3600*1000, math.MaxInt64)
+
+	// Too small duration
+	f("-10000000000y", 0, math.MinInt64)
+	f("-922335359011637780i", 5*3600*1000, math.MinInt64)
 }
 
 func TestDurationError(t *testing.T) {

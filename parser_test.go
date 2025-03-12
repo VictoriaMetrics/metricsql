@@ -1008,30 +1008,3 @@ func TestParseError(t *testing.T) {
 	f(`with (x={a="b" or c="d"}) {x,d="e"}`)
 	f(`with (x={a="b" or c="d"}) {x,d="e" or z="c"}`)
 }
-
-func TestParseDuration(t *testing.T) {
-	s := func(v string, step, expected int64) {
-		de := DurationExpr{s: v}
-		result, err := de.NonNegativeDuration(step)
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-		if result != expected {
-			t.Fatalf("unexpected result; got %d, expected %d", result, expected)
-		}
-	}
-
-	f := func(v string, step int64) {
-		de := DurationExpr{s: v}
-		_, err := de.NonNegativeDuration(step)
-		if err == nil {
-			t.Fatalf("expecting error, got nil")
-		}
-	}
-
-	s("1i", 10, 10)
-	s("10s", 300, 10*1000)
-
-	// too large resulting value
-	f("99999999999999999999i", 10)
-}

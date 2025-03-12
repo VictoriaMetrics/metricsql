@@ -1030,10 +1030,7 @@ func expandDuration(was []*withArgExpr, d *DurationExpr) (*DurationExpr, error) 
 		return t, nil
 	case *NumberExpr:
 		// Convert number of seconds to DurationExpr
-		de := &DurationExpr{
-			s: t.s,
-		}
-		return de, nil
+		return newDurationExpr(t.s)
 	default:
 		return nil, fmt.Errorf("unexpected value for WITH template %q; got %s; want duration", d.s, e.AppendString(nil))
 	}
@@ -1631,24 +1628,31 @@ func (p *parser) parsePositiveDuration() (*DurationExpr, error) {
 		}
 	}
 	// Verify duration value.
-	if _, err := DurationValue(s, 0); err != nil {
-		return nil, fmt.Errorf(`duration: parse value error: %q: %w`, s, err)
-	}
 	if s == "$__interval" {
 		s = "1i"
+	}
+	return newDurationExpr(s)
+}
+
+// DurationExpr contains the duration
+type DurationExpr struct {
+	// s is a string representation of the duration.
+	//
+	// it must contain valid duration if needsParsing is set to false.
+	s string
+
+	// needsParsing is set to true if s isn't parsed yet with expandWithExpr()
+	needsParsing bool
+}
+
+func newDurationExpr(s string) (*DurationExpr, error) {
+	if _, err := DurationValue(s, 0); err != nil {
+		return nil, fmt.Errorf(`cannot parse duration %q: %w`, s, err)
 	}
 	de := &DurationExpr{
 		s: s,
 	}
 	return de, nil
-}
-
-// DurationExpr contains the duration
-type DurationExpr struct {
-	s string
-
-	// needsParsing is set to true if s isn't parsed yet with expandWithExpr()
-	needsParsing bool
 }
 
 // AppendString appends string representation of de to dst and returns the result.
@@ -1663,10 +1667,7 @@ func (de *DurationExpr) AppendString(dst []byte) []byte {
 //
 // Error is returned if the duration is negative.
 func (de *DurationExpr) NonNegativeDuration(step int64) (int64, error) {
-	d, err := de.Duration(step)
-	if err != nil {
-		return 0, err
-	}
+	d := de.Duration(step)
 	if d < 0 {
 		return 0, fmt.Errorf("unexpected negative duration %dms", d)
 	}
@@ -1674,18 +1675,18 @@ func (de *DurationExpr) NonNegativeDuration(step int64) (int64, error) {
 }
 
 // Duration returns the duration from de in milliseconds.
-func (de *DurationExpr) Duration(step int64) (int64, error) {
+func (de *DurationExpr) Duration(step int64) int64 {
 	if de == nil {
-		return 0, nil
+		return 0
 	}
 	if de.needsParsing {
 		panic(fmt.Errorf("BUG: duration %q must be already parsed", de.s))
 	}
 	d, err := DurationValue(de.s, step)
 	if err != nil {
-		return 0, fmt.Errorf("cannot parse duration %q: %w", de.s, err)
+		panic(fmt.Errorf("BUG: cannot parse duration %q: %s", de.s, err))
 	}
-	return d, nil
+	return d
 }
 
 // parseIdentExpr parses expressions starting with `ident` token.
