@@ -8,7 +8,7 @@ import (
 )
 
 func ExampleExpandWithExprs() {
-	// mql can contain arbitrary MetricsQL extensions - see https://docs.victoriametrics.com/metricsql/
+	// mql can contain arbitrary MetricsQL extensions - see https://docs.victoriametrics.com/victoriametrics/metricsql/
 	mql := `WITH (
 		commonFilters = {job="$job", instance="$instance"},
 		f(a, b) = 100*(a/b),
