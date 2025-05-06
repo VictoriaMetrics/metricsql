@@ -448,6 +448,8 @@ func TestParseSuccess(t *testing.T) {
 	same(`avg(x) limit 10`)
 	same(`avg(x) without(z,b) limit 1`)
 	another(`avg by(x) (z) limit 20`, `avg(z) by(x) limit 20`)
+	// utf-8 quoted label names
+	another(`sum({"metric name","label"="value"}) by ("cluster!one",instance)`, `sum(metric\ name{label="value"}) by(cluster\!one,instance)`)
 
 	// All the above
 	another(`Sum(timestamp(M) * M{X=""}[5m] Offset 7m - 123, 35) BY (X, y) * LAG("Test")`,
