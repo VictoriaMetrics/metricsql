@@ -1247,6 +1247,11 @@ func (p *parser) parseIdentList(allowStar bool) ([]string, error) {
 			}
 			return idents, nil
 		}
+		if isQuotedString(p.lex.Token) {
+			// indent could be quoted according to prometheus utf-8 encoding
+			// https://github.com/prometheus/proposals/blob/main/proposals/2023-08-21-utf8.md
+			p.lex.Token = p.lex.Token[1 : len(p.lex.Token)-1]
+		}
 		if !isIdentPrefix(p.lex.Token) {
 			return nil, fmt.Errorf(`identList: unexpected token %q; want "ident"`, p.lex.Token)
 		}
