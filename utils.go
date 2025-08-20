@@ -65,10 +65,10 @@ func VisitAll(e Expr, f func(expr Expr)) {
 //
 // These expressions are implicitly converted into another expressions, which returns unexpected results most of the time:
 //
-//	rate(default_rollup(sum(foo))[1i:1i])
-//	rate(default_rollup(abs(foo))[1i:1i])
-//	rate(default_rollup(foo + bar)[1i:1i])
-//	rate(default_rollup(foo > 10)[1i:1i])
+//	rate(sum(default_rollup(foo[1i:1i])))
+//	rate(abs(default_rollup(foo[1i:1i])))
+//	rate(default_rollup(foo[1i:1i]) + default_rollup(bar[1i:1i]))
+//	rate(default_rollup(foo[1i:1i]) > 10)
 //
 // See https://docs.victoriametrics.com/victoriametrics/metricsql/#implicit-query-conversions
 //
