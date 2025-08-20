@@ -83,6 +83,17 @@ func IsLikelyInvalid(e Expr) bool {
 		if !ok {
 			return
 		}
+		if fe.Name == `timestamp` {
+			// In Prometheus, timestamp is defined as a transform function on instant vectors,
+			// but its behavior is closer to a rollup since it returns raw sample timestamps.
+			// VictoriaMetrics explicitly defines timestamp as a rollup function.
+			// To remain consistent with Prometheus, IsLikelyInvalid does not treat timestamp
+			// as an implicit conversion even when applied to non-metric expressions, like timestamp(sum(foo)).
+			//
+			// See more in https://github.com/VictoriaMetrics/VictoriaMetrics/issues/9527#issuecomment-3191439447
+			return
+		}
+
 		idx := GetRollupArgIdx(fe)
 		if idx < 0 || idx >= len(fe.Args) {
 			return

@@ -85,6 +85,7 @@ func TestIsLikelyInvalid(t *testing.T) {
 
 	// This should be OK, since it is easy to reason about
 	f(`rate(foo)`, false)
+	f(`timestamp(foo)`, false)
 	f(`foo[5m]`, false)
 	f(`1 + foo[5m]`, false)
 
@@ -103,6 +104,7 @@ func TestIsLikelyInvalid(t *testing.T) {
 	// This is OK, since it is supported by Prometheus
 	f(`rate(foo{bar=~"baz"}[5m:1s])`, false)
 	f(`rate(foo{bar=~"baz"}[5m:1s] offset 1h)`, false)
+	f(`timestamp(sum(foo))`, false)
 
 	f(`sum(foo)`, false)
 	f(`sum(rate(foo))`, false)
