@@ -122,13 +122,12 @@ again:
 		}
 		goto tokenFoundLabel
 	}
-	if strings.HasPrefix(s, "$__interval") {
-		lex.sTail = s[len("$__interval"):]
-		return "$__interval", nil
-	}
-	if strings.HasPrefix(s, "$__rate_interval") {
-		lex.sTail = s[len("$__rate_interval"):]
-		return "$__interval", nil
+	if isVariable(s) {
+		token, err = scanVariable(s)
+		if err != nil {
+			return "", err
+		}
+		goto tokenFoundLabel
 	}
 	return "", fmt.Errorf("cannot recognize %q", s)
 
@@ -299,6 +298,43 @@ func scanPositiveNumber(s string) (string, error) {
 		return "", fmt.Errorf("missing exponent part in %q", s)
 	}
 	return s[:j], nil
+}
+
+func isVariable(s string) bool {
+	return len(s) > 1 && s[0] == '$'
+}
+
+func isVariableChar(c byte) bool {
+	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_'
+}
+
+func scanVariable(s string) (string, error) {
+	if len(s) < 2 {
+		return "", fmt.Errorf("too small string for a variable %q", s)
+	}
+	i := 1
+	hasBraces := s[i] == '{'
+	if hasBraces {
+		i++
+	}
+	for i < len(s) {
+		if hasBraces {
+			if s[i] == '}' {
+				i++
+				break
+			}
+			if !isVariableChar(s[i]) {
+				return "", fmt.Errorf("not allowed symbol in variable %q", s)
+			}
+		} else if !isVariableChar(s[i]) {
+			break
+		}
+		i++
+	}
+	if hasBraces && i <= 3 || i <= 2 {
+		return "", fmt.Errorf("impossible variable name %q", s)
+	}
+	return s[:i], nil
 }
 
 func scanNumMultiplier(s string) int {
@@ -534,7 +570,7 @@ func scanSpecialIntegerPrefix(s string) (skipChars int, isHex bool) {
 }
 
 func isPositiveDuration(s string) bool {
-	if s == "$__interval" {
+	if s == "$__interval" || s == "$__rate_interval" {
 		return true
 	}
 	n := scanDuration(s)
@@ -610,7 +646,7 @@ func DurationValue(s string, step int64) (int64, error) {
 }
 
 func parseSingleDuration(s string, step int64) (float64, error) {
-	if s == "$__interval" {
+	if s == "$__interval" || s == "$__rate_interval" {
 		return float64(step), nil
 	}
 
@@ -676,8 +712,8 @@ func scanSingleDuration(s string, canBeNegative bool) int {
 	if s[0] == '-' && canBeNegative {
 		i++
 	}
-	if s[i:] == "$__interval" {
-		return i + len("$__interval")
+	if s[i:] == "$__interval" || s[i:] == "$__rate_interval" {
+		return i + len(s[i:])
 	}
 	for i < len(s) && isDecimalChar(s[i]) {
 		i++

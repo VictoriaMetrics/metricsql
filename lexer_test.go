@@ -98,6 +98,33 @@ func TestScanPositiveNumberFailure(t *testing.T) {
 	f("12.34e-")
 }
 
+func TestScanVariableSuccess(t *testing.T) {
+	f := func(s, vsExpected string) {
+		t.Helper()
+		vs, err := scanVariable(s)
+		if err != nil {
+			t.Fatalf("unexpected error in scanVariable(%q): %s", s, err)
+		}
+		if vs != vsExpected {
+			t.Fatalf("unexpected variable scanned from %q; got %q; want %q", s, vs, vsExpected)
+		}
+	}
+	f("$__rate_interval", "$__rate_interval")
+	f("${foobar},test", "${foobar}")
+}
+
+func TestScanVariableFailure(t *testing.T) {
+	f := func(s string) {
+		t.Helper()
+		vs, err := scanVariable(s)
+		if err == nil {
+			t.Fatalf("expecting non-nil error in scanVariable(%q); got result %q", s, vs)
+		}
+	}
+	f("")
+	f("${foobar,")
+}
+
 func TestParsePositiveNumberSuccess(t *testing.T) {
 	f := func(s string, vExpected float64) {
 		t.Helper()
