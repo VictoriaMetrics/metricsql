@@ -60,6 +60,7 @@ var transformFuncs = map[string]bool{
 	"label_transform":            true,
 	"label_uppercase":            true,
 	"label_value":                true,
+	"label_values":               true,
 	"labels_equal":               true,
 	"limit_offset":               true,
 	"ln":                         true,
