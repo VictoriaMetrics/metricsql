@@ -13,8 +13,13 @@ import (
 //
 // MetricsQL is backwards-compatible with PromQL.
 func Parse(s string) (Expr, error) {
+	return ParseWithVars(s, false)
+}
+
+// ParseWithVars provides an option to keep variables in expressions.
+func ParseWithVars(s string, keepVars bool) (Expr, error) {
 	// Parse s
-	e, err := parseInternal(s)
+	e, err := parseInternal(s, keepVars)
 	if err != nil {
 		return nil, err
 	}
@@ -32,8 +37,10 @@ func Parse(s string) (Expr, error) {
 	return e, nil
 }
 
-func parseInternal(s string) (Expr, error) {
-	var p parser
+func parseInternal(s string, keepVars bool) (Expr, error) {
+	p := parser{
+		keepVars: keepVars,
+	}
 	p.lex.Init(s)
 	if err := p.lex.Next(); err != nil {
 		return nil, fmt.Errorf(`cannot find the first token: %s`, err)
@@ -258,7 +265,8 @@ func simplifyConstantsInplace(args []Expr) {
 // postconditions for all parser.parse* funcs:
 // - p.lex.Token should point to the next token after the parsed token.
 type parser struct {
-	lex lexer
+	lex      lexer
+	keepVars bool
 }
 
 func isWith(s string) bool {
@@ -472,6 +480,15 @@ func (p *parser) parseSingleExprWithoutRollupSuffix() (Expr, error) {
 	}
 	if isIdentPrefix(p.lex.Token) {
 		return p.parseIdentExpr()
+	}
+	if isVariable(p.lex.Token) {
+		e := &NumberExpr{
+			s: p.lex.Token,
+		}
+		if err := p.lex.Next(); err != nil {
+			return nil, err
+		}
+		return e, nil
 	}
 	switch p.lex.Token {
 	case "(":
@@ -1537,7 +1554,12 @@ func (p *parser) parseWindowAndStep() (*DurationExpr, *DurationExpr, bool, error
 	}
 	var window *DurationExpr
 	if !strings.HasPrefix(p.lex.Token, ":") {
-		if p.lex.Token == "$__interval" {
+		if p.lex.Token == "$__interval" || p.lex.Token == "$__rate_interval" {
+			if p.keepVars {
+				window = &DurationExpr{
+					s: p.lex.Token,
+				}
+			}
 			// Skip $__interval, since it must be treated as missing lookbehind window,
 			// e.g. rate(m[$__interval]) must be equivalent to rate(m).
 			// In this case VictoriaMetrics automatically adjusts the lookbehind window
@@ -1656,8 +1678,14 @@ func (p *parser) parsePositiveDuration() (*DurationExpr, error) {
 		}
 	}
 	// Verify duration value.
-	if s == "$__interval" {
-		s = "1i"
+	if s == "$__interval" || s == "$__rate_interval" {
+		if p.keepVars {
+			return &DurationExpr{
+				s: s,
+			}, nil
+		} else {
+			s = "1i"
+		}
 	}
 	return newDurationExpr(s)
 }
