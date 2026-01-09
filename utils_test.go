@@ -66,6 +66,36 @@ func TestVisitAll(t *testing.T) {
 	f("x[1h:5m] offset 5s @ 10s", "x,1h,5m,5s,10s,x[1h:5m] offset 5s @ 10s,")
 }
 
+func TestVisitAllBreakable(t *testing.T) {
+	f := func(q, sExpected string, finishedVisitExpected bool) {
+		t.Helper()
+		expr, err := Parse(q)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		var buf []byte
+		visits := 0
+		finishedVisit := VisitAllBreakable(expr, func(e Expr) bool {
+			visits += 1
+			buf = e.AppendString(buf)
+			buf = append(buf, ',')
+			return visits < 3
+		})
+		if string(buf) != sExpected {
+			t.Fatalf("unexpected result; got\n%q\nwant\n%q", buf, sExpected)
+		}
+		if finishedVisit != finishedVisitExpected {
+			t.Fatalf("unexpected 'finishedVisit' result; got\n%t\nwant\n%t", finishedVisit, finishedVisitExpected)
+		}
+	}
+	f("123", "123,", true)
+	f("1+2", "3,", true)
+	f("1+a", "1,a,(),", false)
+	f("avg(a<b+1, sum(x) by (y))", "a,b,1,", false)
+	f("x[1s]", "x,1s,x[1s],", false)
+	f("x[1h:5m] offset 5s @ 10s", "x,1h,5m,", false)
+}
+
 func TestIsLikelyInvalid(t *testing.T) {
 	f := func(q string, resultExpected bool) {
 		t.Helper()
