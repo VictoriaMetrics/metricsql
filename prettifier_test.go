@@ -265,4 +265,14 @@ x + sum(y)`)
 
 	// function replacement in WITH expression
 	same(`WITH (f(x) = abc{x}, z = f({foo="bar"})) z`)
+
+	// Test for issue #60: __name__ with regex operator should not be treated as metric name
+	same(`count({__name__=~"node_arp_entries|node_cooling_device_cur_state"})`)
+	same(`{__name__=~"foo|bar"}`)
+	same(`{__name__!~"foo|bar"}`)
+	same(`sum({__name__=~"metric.*"})`)
+
+	// Verify that exact match __name__ still works
+	another(`{__name__="foo"}`, `foo`)
+	another(`{__name__="foo",bar="baz"}`, `foo{bar="baz"}`)
 }
