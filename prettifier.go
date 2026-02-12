@@ -2,7 +2,12 @@ package metricsql
 
 // Prettify returns prettified representation of MetricsQL query q.
 func Prettify(q string) (string, error) {
-	e, err := parseInternal(q)
+	return PrettifyWithVars(q, false)
+}
+
+// PrettifyWithVars returns prettified representation of MetricsQL query q and keeps expression variables depending on keepVars value.
+func PrettifyWithVars(q string, keepVars bool) (string, error) {
+	e, err := parseInternal(q, keepVars)
 	if err != nil {
 		return "", err
 	}
