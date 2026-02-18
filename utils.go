@@ -54,6 +54,70 @@ func VisitAll(e Expr, f func(expr Expr)) {
 	f(e)
 }
 
+// VisitAll recursively calls f for all the Expr children in e, unless `false` is return
+// (in that case, it stops visiting). It returns `true` only if the caller never returned
+// `false` in the callback
+//
+// It visits leaf children at first and then visits parent nodes.
+// It is safe modifying expr in f.
+func VisitAllBreakable(e Expr, f func(expr Expr) bool) bool {
+	switch expr := e.(type) {
+	case *BinaryOpExpr:
+		if VisitAllBreakable(expr.Left, f) == false {
+			return false
+		}
+		if VisitAllBreakable(expr.Right, f) == false {
+			return false
+		}
+		if VisitAllBreakable(&expr.GroupModifier, f) == false {
+			return false
+		}
+		if VisitAllBreakable(&expr.JoinModifier, f) == false {
+			return false
+		}
+	case *FuncExpr:
+		for _, arg := range expr.Args {
+			if VisitAllBreakable(arg, f) == false {
+				return false
+			}
+		}
+	case *AggrFuncExpr:
+		for _, arg := range expr.Args {
+			if VisitAllBreakable(arg, f) == false {
+				return false
+			}
+		}
+		if VisitAllBreakable(&expr.Modifier, f) == false {
+			return false
+		}
+	case *RollupExpr:
+		if VisitAllBreakable(expr.Expr, f) == false {
+			return false
+		}
+		if expr.Window != nil {
+			if VisitAllBreakable(expr.Window, f) == false {
+				return false
+			}
+		}
+		if expr.Step != nil {
+			if VisitAllBreakable(expr.Step, f) == false {
+				return false
+			}
+		}
+		if expr.Offset != nil {
+			if VisitAllBreakable(expr.Offset, f) == false {
+				return false
+			}
+		}
+		if expr.At != nil {
+			if VisitAllBreakable(expr.At, f) == false {
+				return false
+			}
+		}
+	}
+	return f(e)
+}
+
 // IsLikelyInvalid returns true if e contains tricky implicit conversion, which is invalid most of the time.
 //
 // Examples of invalid expressions:
