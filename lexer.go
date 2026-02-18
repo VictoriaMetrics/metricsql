@@ -418,6 +418,37 @@ func appendQuotedIdent(dst []byte, s string) []byte {
 	return dst
 }
 
+func unescapeUTFSymbols(s string) string {
+	n := strings.IndexByte(s, '\\')
+	if n < 0 {
+		return s
+	}
+	dst := make([]byte, 0, len(s))
+	for {
+		dst = append(dst, s[:n]...)
+		s = s[n+1:]
+		if isUTFEscapePrefix(s) {
+			r, size := decodeUTFEscapeSequence(s)
+			if r == utf8.RuneError {
+				// Cannot decode escape sequence. Put it in the output as is
+				dst = append(dst, '\\')
+			} else {
+				dst = utf8.AppendRune(dst, r)
+				s = s[size:]
+			}
+		} else {
+			// Save non-UTF escape sequence as is
+			dst = append(dst, '\\')
+		}
+
+		n = strings.IndexByte(s, '\\')
+		if n < 0 {
+			dst = append(dst, s...)
+			return string(dst)
+		}
+	}
+}
+
 func appendEscapedIdent(dst []byte, s string) []byte {
 	i := 0
 	for i < len(s) {
@@ -781,7 +812,33 @@ func appendEscapeSequence(dst []byte, r rune) []byte {
 	return append(dst, 'u', toHex(byte(r>>12)), toHex(byte((r>>8)&0xf)), toHex(byte(r>>4)), toHex(byte(r&0xf)))
 }
 
-func decodeEscapeSequence(s string) (rune, int) {
+// checks if string has one of supported escape sequences
+// supported: \x, \X, \u, \U
+func hasUTFEscapedSymbols(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) {
+			switch s[i+1] {
+			case 'x', 'X', 'u', 'U':
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func isUTFEscapePrefix(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	switch s[0] {
+	case 'x', 'X', 'u', 'U':
+		return true
+	}
+	return false
+}
+
+func decodeUTFEscapeSequence(s string) (rune, int) {
 	if strings.HasPrefix(s, "x") || strings.HasPrefix(s, "X") {
 		if len(s) >= 3 {
 			h1 := fromHex(s[1])
@@ -805,6 +862,15 @@ func decodeEscapeSequence(s string) (rune, int) {
 		}
 		return utf8.RuneError, 0
 	}
+	// Improperly escaped non-printable char
+	return utf8.RuneError, 0
+}
+
+func decodeEscapeSequence(s string) (rune, int) {
+	if isUTFEscapePrefix(s) {
+		return decodeUTFEscapeSequence(s)
+	}
+
 	r, size := utf8.DecodeRuneInString(s)
 	if unicode.IsPrint(r) {
 		return r, size

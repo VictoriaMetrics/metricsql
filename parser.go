@@ -1166,6 +1166,9 @@ func extractStringValue(token string) (string, error) {
 		token = strings.Replace(token, `"`, `\"`, -1)
 		token = `"` + token + `"`
 	}
+	if hasUTFEscapedSymbols(token) {
+		token = unescapeUTFSymbols(token)
+	}
 	s, err := strconv.Unquote(token)
 	if err != nil {
 		return "", fmt.Errorf(`cannot parse string literal %q: %s`, token, err)
