@@ -12,13 +12,13 @@ func TestRegexpCacheConcurrent(t *testing.T) {
 	maxChars := 1000
 	rc := newRegexpCache(maxChars)
 	resultCh := make(chan error, goroutines)
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		go func() {
 			resultCh <- testRegexpCache(rc)
 		}()
 	}
 	timer := time.NewTimer(time.Second * 5)
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		select {
 		case <-timer.C:
 			t.Fatalf("timeout")
@@ -35,7 +35,7 @@ func TestRegexpCacheConcurrent(t *testing.T) {
 }
 
 func testRegexpCache(rc *regexpCache) error {
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		key := fmt.Sprintf("foo|regexp-%d", i)
 		rcv := rc.Get(key)
 		if rcv != nil {

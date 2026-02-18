@@ -7,7 +7,7 @@ import (
 func TestExpandWithExprsSuccess(t *testing.T) {
 	f := func(q, qExpected string) {
 		t.Helper()
-		for i := 0; i < 3; i++ {
+		for range 3 {
 			qExpanded, err := ExpandWithExprs(q)
 			if err != nil {
 				t.Fatalf("unexpected error when expanding %q: %s", q, err)
@@ -27,7 +27,7 @@ func TestExpandWithExprsSuccess(t *testing.T) {
 func TestExpandWithExprsError(t *testing.T) {
 	f := func(q string) {
 		t.Helper()
-		for i := 0; i < 3; i++ {
+		for range 3 {
 			qExpanded, err := ExpandWithExprs(q)
 			if err == nil {
 				t.Fatalf("expecting non-nil error when expanding %q", q)
