@@ -23,6 +23,7 @@ func TestParseSuccess(t *testing.T) {
 	}
 
 	// metricExpr
+	same(`topk($topk, max(sum(vmalert_recording_rules_last_evaluation_samples{job=~"$job",instance=~"$instance",group=~"$group",file=~"$file"}) by(job,instance,group,file,recording) > 0) by(job,group,file,recording))`)
 	same(`{}`)
 	same(`{}[5m]`)
 	same(`{}[5m:]`)
@@ -641,6 +642,31 @@ func TestParseSuccess(t *testing.T) {
 	another(`increase(m[$__rate_interval] offset -$__rate_interval) + -$__rate_interval`, `increase(m offset -1i) + (0 - 1i)`)
 	another(`rate(m[$__rate_interval:5m])`, `rate(m[:5m])`)
 	another(`rate(m[$__interval:5m])`, `rate(m[:5m])`)
+}
+
+func TestParseWithVarsSuccess(t *testing.T) {
+	another := func(s string, sExpected string) {
+		t.Helper()
+
+		e, err := ParseWithVars(s, true)
+		if err != nil {
+			t.Fatalf("unexpected error when parsing %s: %s", s, err)
+		}
+		res := e.AppendString(nil)
+		if string(res) != sExpected {
+			t.Fatalf("unexpected string constructed;\ngot\n%s\nwant\n%s", res, sExpected)
+		}
+	}
+	same := func(s string) {
+		t.Helper()
+		another(s, s)
+	}
+
+	// $__interval and $__rate_interval must be replaced with 1i
+	same(`rate(m[$__interval] offset $__interval) * $__interval`)
+	another(`increase(m[$__rate_interval] offset -$__rate_interval) + -$__rate_interval`, `increase(m[$__rate_interval] offset -$__rate_interval) + (0 - $__rate_interval)`)
+	same(`rate(m[$__rate_interval:5m])`)
+	same(`rate(m[$__interval:5m])`)
 }
 
 func TestParseError(t *testing.T) {
