@@ -342,6 +342,22 @@ func TestParseSuccess(t *testing.T) {
 	another(`a + oN() gROUp_rigHt(*) PREfix "bar" b`, `a + on() group_right(*) prefix "bar" b`)
 	same(`a + on(a) group_left(x,y) prefix "foo" b`)
 	same(`a + on(a,b) group_right(z) prefix "bar" b`)
+
+	// fill modifiers
+	same(`m * on(job) fill_right(0) n`)
+	same(`m * on(job) fill_left(0) n`)
+	same(`m * on(job) fill_left(0) fill_right(1) n`)
+	same(`m * on(job) fill(0) n`)
+	another(`m * on(job) FILL_RIGHT(0) n`, `m * on(job) fill_right(0) n`)
+	another(`m * on(job) FILL(0) n`, `m * on(job) fill(0) n`)
+	same(`m * on(job) fill_right(-1) n`)
+	same(`m * on(job) fill_left(inf) n`)
+	same(`m * on(job) fill(NaN) n`)
+	same(`m * on(job) group_left() fill_right(0) n`)
+	same(`m * fill_right(0) n`)
+	another(`a + fill_right`, `a + (fill_right)`)
+	another(`a + fill_left`, `a + (fill_left)`)
+	another(`a + fill`, `a + (fill)`)
 	another(`5 - 1 + 3 * 2 ^ 2 ^ 3 - 2  OR Metric {Bar= "Baz", aaa!="bb",cc=~"dd" ,zz !~"ff" } `,
 		`770 or Metric{Bar="Baz",aaa!="bb",cc=~"dd",zz!~"ff"}`)
 
