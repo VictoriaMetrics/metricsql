@@ -123,6 +123,16 @@ func isBinaryOpBoolModifier(s string) bool {
 	return s == "bool"
 }
 
+func isBinaryOpFillModifier(s string) bool {
+	s = strings.ToLower(s)
+	switch s {
+	case "fill", "fill_left", "fill_right":
+		return true
+	default:
+		return false
+	}
+}
+
 // IsBinaryOpCmp returns true if op is comparison operator such as '==', '!=', etc.
 func IsBinaryOpCmp(op string) bool {
 	switch op {
