@@ -50,7 +50,7 @@ func TestPushdownBinaryOpFilters(t *testing.T) {
 	f(`foo * ignoring(x) bar`, `{a="b"}`, `foo{a="b"} * ignoring(x) bar{a="b"}`)
 	f(`foo{f1!~"x"} UNLEss bar{f2=~"y.+"}`, `{a="b",x=~"y"}`, `foo{a="b",f1!~"x",x=~"y"} unless bar{a="b",f2=~"y.+",x=~"y"}`)
 	f(`a / sum(x)`, `{a="b",c=~"foo|bar"}`, `a{a="b",c=~"foo|bar"} / sum(x)`)
-	f(`round(rate(x[5m] offset -1h)) + 123 / {a="b"}`, `{x!="y"}`, `round(rate(x{x!="y"}[5m] offset -1h)) + (123 / {a="b",x!="y"})`)
+	f(`round(rate(x[5m] offset -1h)) + 123 / {a="b"}`, `{x!="y"}`, `round(rate(x{x!="y"}[5m] offset -1h)) + 123 / {a="b",x!="y"}`)
 	f(`scalar(foo)+bar`, `{a="b"}`, `scalar(foo) + bar{a="b"}`)
 	f(`vector(foo)`, `{a="b"}`, `vector(foo{a="b"})`)
 	f(`{a="b"} + on() group_left() {c="d"}`, `{a="b"}`, `{a="b"} + on() group_left() {c="d"}`)
@@ -382,9 +382,9 @@ func TestOptimize(t *testing.T) {
 	f(`rate(sum(foo[5m:]) by (baz)) + bar{baz="a"}`, `rate(sum(foo{baz="a"}[5m:]) by(baz)) + bar{baz="a"}`)
 
 	// binary ops with constants or scalars
-	f(`100 * foo / bar{baz="a"}`, `(100 * foo{baz="a"}) / bar{baz="a"}`)
-	f(`foo * 100 / bar{baz="a"}`, `(foo{baz="a"} * 100) / bar{baz="a"}`)
-	f(`foo / bar{baz="a"} * 100`, `(foo{baz="a"} / bar{baz="a"}) * 100`)
+	f(`100 * foo / bar{baz="a"}`, `100 * foo{baz="a"} / bar{baz="a"}`)
+	f(`foo * 100 / bar{baz="a"}`, `foo{baz="a"} * 100 / bar{baz="a"}`)
+	f(`foo / bar{baz="a"} * 100`, `foo{baz="a"} / bar{baz="a"} * 100`)
 	f(`scalar(x) * foo / bar{baz="a"}`, `(scalar(x) * foo{baz="a"}) / bar{baz="a"}`)
 	f(`SCALAR(x) * foo / bar{baz="a"}`, `(SCALAR(x) * foo{baz="a"}) / bar{baz="a"}`)
 	f(`100 * on(foo) bar{baz="z"} + a`, `(100 * on(foo) bar{baz="z"}) + a`)

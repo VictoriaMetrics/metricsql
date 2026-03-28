@@ -258,7 +258,7 @@ x + sum(y)`)
 		`WITH (
   x = a{b="c"} + WITH (q = we{rt="z"}) q,
 )
-(abc / x) + WITH (rt = 234 + 234) (2 * rt) + poasdfklkjlkjfdsfjklfdfdsfdsfddfsfd`)
+abc / x + WITH (rt = 234 + 234) 2 * rt + poasdfklkjlkjfdsfjklfdfdsfdsfddfsfd`)
 
 	// duration replacement in WITH expression
 	another(`WITH(BAR=1m,x(BAZ)=sum(rate({a="b"}[BAR:BAZ])) offset BAR) x`, `WITH (BAR = 1m, x(BAZ) = sum(rate({a="b"}[BAR:BAZ])) offset BAR) x`)
@@ -275,4 +275,28 @@ x + sum(y)`)
 	// Verify that exact match __name__ still works
 	another(`{__name__="foo"}`, `foo`)
 	another(`{__name__="foo",bar="baz"}`, `foo{bar="baz"}`)
+
+	same(`1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10`)
+	same(`(1 + 2) * (3 + 4)`)
+	same(`1 + 2 + foo + bar + baz`)
+
+	another(`a offset 5m + b @ start()`, `(a offset 5m) + (b @ start())`)
+
+	// see https://github.com/VictoriaMetrics/metricsql/issues/54
+	another(`(1 - (node_memory_MemFree_bytes + node_memory_Cached_bytes + node_memory_Buffers_bytes + node_memory_SReclaimable_bytes) / node_memory_MemTotal_bytes) * 100`,
+		`(
+  1
+    -
+  (
+    node_memory_MemFree_bytes + node_memory_Cached_bytes
+      +
+    node_memory_Buffers_bytes
+      +
+    node_memory_SReclaimable_bytes
+  )
+    /
+  node_memory_MemTotal_bytes
+)
+  *
+100`)
 }
