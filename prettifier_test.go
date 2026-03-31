@@ -284,8 +284,7 @@ x + sum(y)`)
 
 	// see https://github.com/VictoriaMetrics/metricsql/issues/54
 	another(`(1 - (node_memory_MemFree_bytes + node_memory_Cached_bytes + node_memory_Buffers_bytes + node_memory_SReclaimable_bytes) / node_memory_MemTotal_bytes) * 100`,
-		`
-(
+		`(
   1
     -
   (
@@ -302,26 +301,6 @@ x + sum(y)`)
 )
   *
 100`)
-
-	`
-(
-  1
-    -
-  (
-    (
-      (
-        (node_memory_MemFree_bytes + node_memory_Cached_bytes)
-          +
-        node_memory_Buffers_bytes
-      )
-        +
-      node_memory_SReclaimable_bytes
-    )
-      /
-    node_memory_MemTotal_bytes
-  )
-)
-  *
-100
-`
 }
+
+
