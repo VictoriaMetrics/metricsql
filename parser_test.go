@@ -397,8 +397,8 @@ func TestParseSuccess(t *testing.T) {
 	another(`group_left / (sum(1, 2))`, `group_left / sum(1, 2)`)
 
 	// parensExpr
-	another(`(-foo + ((bar) / (baz))) + ((23))`, `0 - foo + bar / baz + 23`)
-	another(`(FOO + ((Bar) / (baZ))) + ((23))`, `FOO + Bar / baZ + 23`)
+	another(`(-foo + ((bar) / (baz))) + ((23))`, `0 - foo + (bar / baz) + 23`)
+	another(`(FOO + ((Bar) / (baZ))) + ((23))`, `FOO + (Bar / baZ) + 23`)
 	same(`(foo, bar)`)
 	another(`((foo, bar),(baz))`, `((foo, bar), baz)`)
 	same(`(foo, (bar, baz), ((x, y), (z, y), xx))`)
@@ -488,7 +488,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (foo(bar) = {__name__!="bar"}) foo(x)`, `{__name__!="bar"}`)
 	another(`with (foo(bar) = bar{__name__="bar"}) foo(x)`, `x`)
 	another(`with (foo\-bar(baz) = baz + baz) foo\-bar((x,y))`, `(x, y) + (x, y)`)
-	another(`with (foo\-bar(baz) = baz + baz) foo\-bar(x*y)`, `x * y + x * y`)
+	another(`with (foo\-bar(baz) = baz + baz) foo\-bar(x*y)`, `(x * y) + (x * y)`)
 	another(`with (foo\-bar(baz) = baz + baz) foo\-bar(x\*y)`, `x\*y + x\*y`)
 	another(`with (foo\-bar(b\ az) = b\ az + b\ az) foo\-bar(x\*y)`, `x\*y + x\*y`)
 
@@ -572,7 +572,7 @@ func TestParseSuccess(t *testing.T) {
 	// Verify nested with exprs
 	another(`with (f(x) = (with(x=y) x) + x) f(z)`, `y + z`)
 	another(`with (x=foo) clamp_min(a, with (y=x) y)`, `clamp_min(a, foo)`)
-	another(`with (x=foo) a * x + (with (y=x) y) / y`, `a * foo + foo / y`)
+	another(`with (x=foo) a * x + (with (y=x) y) / y`, `(a * foo) + (foo / y)`)
 	another(`with (x = with (y = foo) y + x) x/x`, `(foo + x) / (foo + x)`)
 	another(`with (
 		x = {foo="bar"},
@@ -583,7 +583,7 @@ func TestParseSuccess(t *testing.T) {
 			)
 			z(foo) / changes(x)
 	)
-	f(a)`, `(a + foo * m{foo="bar",y="1"}) / changes(a)`)
+	f(a)`, `(a + (foo * m{foo="bar",y="1"})) / changes(a)`)
 
 	// complex withExpr
 	another(`WITH (
@@ -601,7 +601,7 @@ func TestParseSuccess(t *testing.T) {
 		f(x, y) = x2(x) + x*y + x2(y)
 	)
 	f(a, 3)
-	`, `a ^ 2 + a * 3 + 9`)
+	`, `(a ^ 2) + (a * 3) + 9`)
 	another(`WITH (
 		x2(x) = x^2,
 		f(x, y) = x2(x) + x*y + x2(y)
@@ -633,7 +633,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with (rate(a,b)=a+b) rate(1,2)`, `3`)
 	another(`with (now=now(), sum=sum()) x`, `x`)
 	another(`with (rate(a) = b) c`, `c`)
-	another(`rate(x) + with (rate(a,b)=a*b) rate(2,b)`, `rate(x) + 2 * b`)
+	another(`rate(x) + with (rate(a,b)=a*b) rate(2,b)`, `rate(x) + (2 * b)`)
 	another(`with (sum(a,b)=a+b) sum(c,d)`, `c + d`)
 
 	// $__interval and $__rate_interval must be replaced with 1i

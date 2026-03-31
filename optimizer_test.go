@@ -50,7 +50,7 @@ func TestPushdownBinaryOpFilters(t *testing.T) {
 	f(`foo * ignoring(x) bar`, `{a="b"}`, `foo{a="b"} * ignoring(x) bar{a="b"}`)
 	f(`foo{f1!~"x"} UNLEss bar{f2=~"y.+"}`, `{a="b",x=~"y"}`, `foo{a="b",f1!~"x",x=~"y"} unless bar{a="b",f2=~"y.+",x=~"y"}`)
 	f(`a / sum(x)`, `{a="b",c=~"foo|bar"}`, `a{a="b",c=~"foo|bar"} / sum(x)`)
-	f(`round(rate(x[5m] offset -1h)) + 123 / {a="b"}`, `{x!="y"}`, `round(rate(x{x!="y"}[5m] offset -1h)) + 123 / {a="b",x!="y"}`)
+	f(`round(rate(x[5m] offset -1h)) + 123 / {a="b"}`, `{x!="y"}`, `round(rate(x{x!="y"}[5m] offset -1h)) + (123 / {a="b",x!="y"})`)
 	f(`scalar(foo)+bar`, `{a="b"}`, `scalar(foo) + bar{a="b"}`)
 	f(`vector(foo)`, `{a="b"}`, `vector(foo{a="b"})`)
 	f(`{a="b"} + on() group_left() {c="d"}`, `{a="b"}`, `{a="b"} + on() group_left() {c="d"}`)

@@ -258,7 +258,7 @@ x + sum(y)`)
 		`WITH (
   x = a{b="c"} + WITH (q = we{rt="z"}) q,
 )
-abc / x + WITH (rt = 234 + 234) 2 * rt + poasdfklkjlkjfdsfjklfdfdsfdsfddfsfd`)
+(abc / x) + WITH (rt = 234 + 234) (2 * rt) + poasdfklkjlkjfdsfjklfdfdsfdsfddfsfd`)
 
 	// duration replacement in WITH expression
 	another(`WITH(BAR=1m,x(BAZ)=sum(rate({a="b"}[BAR:BAZ])) offset BAR) x`, `WITH (BAR = 1m, x(BAZ) = sum(rate({a="b"}[BAR:BAZ])) offset BAR) x`)
@@ -284,19 +284,44 @@ abc / x + WITH (rt = 234 + 234) 2 * rt + poasdfklkjlkjfdsfjklfdfdsfdsfddfsfd`)
 
 	// see https://github.com/VictoriaMetrics/metricsql/issues/54
 	another(`(1 - (node_memory_MemFree_bytes + node_memory_Cached_bytes + node_memory_Buffers_bytes + node_memory_SReclaimable_bytes) / node_memory_MemTotal_bytes) * 100`,
-		`(
+		`
+(
   1
     -
   (
-    node_memory_MemFree_bytes + node_memory_Cached_bytes
-      +
-    node_memory_Buffers_bytes
-      +
-    node_memory_SReclaimable_bytes
+    (
+      node_memory_MemFree_bytes + node_memory_Cached_bytes
+        +
+      node_memory_Buffers_bytes
+        +
+      node_memory_SReclaimable_bytes
+    )
+      /
+    node_memory_MemTotal_bytes
   )
-    /
-  node_memory_MemTotal_bytes
 )
   *
 100`)
+
+	`
+(
+  1
+    -
+  (
+    (
+      (
+        (node_memory_MemFree_bytes + node_memory_Cached_bytes)
+          +
+        node_memory_Buffers_bytes
+      )
+        +
+      node_memory_SReclaimable_bytes
+    )
+      /
+    node_memory_MemTotal_bytes
+  )
+)
+  *
+100
+`
 }

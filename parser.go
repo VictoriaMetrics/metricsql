@@ -1977,13 +1977,9 @@ func (be *BinaryOpExpr) appendModifiers(dst []byte) []byte {
 func needBinaryOpArgParens(arg Expr, parentOp string) bool {
 	switch t := arg.(type) {
 	case *BinaryOpExpr:
-		// Parens are required when the child op has lower priority than the parent op,
-		// since removing them would change the evaluation order.
-		if binaryOpPriority(t.Op) < binaryOpPriority(parentOp) {
-			return true
-		}
-
-		if parentOp != "+" && parentOp != "-" && parentOp != "*" && parentOp != "/" {
+		// Parens are required when the child op priority not equal to parent o one.
+		// For example, a + b / c - d should be a + (b / c) - d.
+		if binaryOpPriority(t.Op) != binaryOpPriority(parentOp) {
 			return true
 		}
 
@@ -2005,6 +2001,8 @@ func isBinaryOpLeafSimple(arg Expr) bool {
 		return true
 	case *MetricExpr:
 		metricName := t.getMetricName()
+		// Parens should be added if metric name equals to a reserved word, such as group_left
+		// For example, a + group_left should become a + (group_left). Otherwise, query won't be parsed.
 		return !isReservedBinaryOpIdent(metricName)
 	case *BinaryOpExpr:
 		if t.GroupModifier.Op != "" || t.KeepMetricNames || t.JoinModifier.Op != "" {
