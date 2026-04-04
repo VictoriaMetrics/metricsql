@@ -2,6 +2,7 @@ package metricsql
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -193,6 +194,11 @@ func simplifyConstantsInBinaryExpr(be *BinaryOpExpr) Expr {
 	lne, lok := be.Left.(*NumberExpr)
 	rne, rok := be.Right.(*NumberExpr)
 	if lok && rok {
+		if be.Op == "-" && lne.N == 0 && !math.Signbit(lne.N) && lne.s == "" {
+			return &NumberExpr{
+				N: -rne.N,
+			}
+		}
 		n := binaryOpEvalNumber(be.Op, lne.N, rne.N, be.Bool)
 		return &NumberExpr{
 			N: n,
