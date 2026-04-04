@@ -324,6 +324,8 @@ func TestParseSuccess(t *testing.T) {
 	another(`(1) / (-0.0)`, `-Inf`)
 	another(`-1 / 0`, `-Inf`)
 	another(`-1 / -0.0`, `+Inf`)
+	another(`(1 - 1) - 0`, `0`)
+	another(`(2 - 2) / -1`, `-0`)
 	another(`2 + -1 / 0`, `-Inf`)
 	another(`(-1) ^ 0.5`, `NaN`)
 	another(`-1 ^ 0.5`, `-1`)
