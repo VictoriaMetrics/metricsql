@@ -698,6 +698,8 @@ func getTransformArgIdxForOptimization(funcName string, args []Expr) int {
 		return -1
 	case "absent", "scalar":
 		return -1
+	case "prometheus_buckets":
+		return -1
 	case "end", "now", "pi", "ru", "start", "step", "time":
 		return -1
 	case "limit_offset", "histogram_fraction":

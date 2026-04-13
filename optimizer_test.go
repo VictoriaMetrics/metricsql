@@ -59,6 +59,10 @@ func TestPushdownBinaryOpFilters(t *testing.T) {
 	f(`foo{a="b" or c="d" or x="y",q="w"}`, `{x="y"}`, `foo{a="b",x="y" or c="d",x="y" or q="w",x="y"}`)
 	f(`{a="b" or x="y",q="w"} + bar`, `{x="y"}`, `{a="b",x="y" or q="w",x="y"} + bar{x="y"}`)
 
+	// prometheus_buckets must not accept pushdown since it rewrites vmrange to le labels
+	f(`prometheus_buckets(foo_bucket)`, `{le="0.5"}`, `prometheus_buckets(foo_bucket)`)
+	f(`prometheus_buckets(foo_bucket)`, `{x="y"}`, `prometheus_buckets(foo_bucket)`)
+
 	// pushdown for label_set
 	f(`label_set(foo, "a", "b") + bar{baz="a"}`, `{x="y"}`, `label_set(foo{x="y"}, "a", "b") + bar{baz="a",x="y"}`)
 	f(`label_set(foo, "a", "b", "x", "aa") + bar{baz="a"}`, `{x="y"}`, `label_set(foo, "a", "b", "x", "aa") + bar{baz="a",x="y"}`)
@@ -265,6 +269,11 @@ func TestOptimize(t *testing.T) {
 	f(`histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by (le)) - {a="b"}`, `histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by(le)) - {a="b"}`)
 	f(`histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by (le,x)) - {a="b"}`, `histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by(le,x)) - {a="b",x="y"}`)
 	f(`histogram_quantiles("q", 0.1, 0.9, sum(rate({x="y"}[5m])) by (le,x,a)) - {a="b"}`, `histogram_quantiles("q", 0.1, 0.9, sum(rate({a="b",x="y"}[5m])) by(le,x,a)) - {a="b",x="y"}`)
+
+	// prometheus_buckets rewrites vmrange to le labels, so le filters must not be pushed down
+	f(`prometheus_buckets(foo_bucket) / bar_bucket{le="0.5"}`, `prometheus_buckets(foo_bucket) / bar_bucket{le="0.5"}`)
+	f(`prometheus_buckets(foo_bucket{x="y"}) + bar{le="0.5",x="y"}`, `prometheus_buckets(foo_bucket{x="y"}) + bar{le="0.5",x="y"}`)
+	f(`prometheus_buckets(foo_bucket) + bar{x="y"}`, `prometheus_buckets(foo_bucket) + bar{x="y"}`)
 
 	// vector
 	f(`vector(foo) + bar{a="b"}`, `vector(foo{a="b"}) + bar{a="b"}`)
