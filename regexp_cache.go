@@ -136,7 +136,9 @@ func (rc *regexpCache) Put(regexp string, rcv *regexpCacheValue) {
 			}
 		}
 	}
+	if _, exists := rc.m[regexp]; !exists {
+		rc.charsCurrent += len(regexp)
+	}
 	rc.m[regexp] = rcv
-	rc.charsCurrent += len(regexp)
 	rc.mu.Unlock()
 }
