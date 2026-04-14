@@ -408,7 +408,7 @@ func hasEscapedChars(s string) bool {
 }
 
 func appendQuotedIdent(dst []byte, s string) []byte {
-	dst = append(dst, '"')
+	dst = utf8.AppendRune(dst, '"')
 	for i := 0; i < len(s); {
 		r, size := utf8.DecodeRuneInString(s[i:])
 		if r == '"' || r == '\\' {
@@ -417,7 +417,7 @@ func appendQuotedIdent(dst []byte, s string) []byte {
 		dst = utf8.AppendRune(dst, r)
 		i += size
 	}
-	dst = append(dst, '"')
+	dst = utf8.AppendRune(dst, '"')
 	return dst
 }
 
