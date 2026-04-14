@@ -62,6 +62,7 @@ func TestVisitAll(t *testing.T) {
 	f("1+2", "3,")
 	f("1+a", "1,a,(),(),1 + a,")
 	f("avg(a<b+1, sum(x) by (y))", "a,b,1,(),(),b + 1,(),(),a < (b + 1),x,by(y),sum(x) by(y),(),avg(a < (b + 1), sum(x) by(y)),")
+	f("a + on() group_left() prefix \"foo\" b", `a,b,on(),group_left(),"foo",a + on() group_left() prefix "foo" b,`)
 	f("x[1s]", "x,1s,x[1s],")
 	f("x[1h:5m] offset 5s @ 10s", "x,1h,5m,5s,10s,x[1h:5m] offset 5s @ 10s,")
 }
