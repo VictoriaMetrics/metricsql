@@ -417,6 +417,7 @@ func TestParseSuccess(t *testing.T) {
 	same(`a unless (b and c)`)
 	another(`(a ^ b) ^ c`, `a ^ b ^ c`)
 	another(`a ^ (b ^ c)`, `a ^ b ^ c`)
+	same(`a / (b * c)`)
 
 	same(`(foo, bar)`)
 	another(`((foo, bar),(baz))`, `((foo, bar), baz)`)

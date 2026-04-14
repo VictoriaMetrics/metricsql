@@ -1977,10 +1977,13 @@ func (be *BinaryOpExpr) appendModifiers(dst []byte) []byte {
 func needBinaryOpArgParens(arg Expr, parentOp string, isRight bool) bool {
 	switch t := arg.(type) {
 	case *BinaryOpExpr:
+		// Parens are required when the child op priority not equal to parent o one.
+		// For example, a + b / c - d should be a + (b / c) - d.
 		if binaryOpPriority(t.Op) != binaryOpPriority(parentOp) {
 			return true
 		}
 
+		// Same op: parens are only needed when the sub-expression is not a simple leaf chain.
 		if t.Op != parentOp {
 			if isRight && !isRightAssociativeBinaryOp(parentOp) {
 				return true
