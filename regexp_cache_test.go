@@ -103,4 +103,7 @@ func TestRegexpCache(t *testing.T) {
 	fn(9, []string{"123", "fd{456", "789"}, 3, 12) // overflow by 1 entry is allowed
 	fn(12, []string{"123", "fd{456", "789"}, 3, 12)
 	fn(15, []string{"123", "fd{456", "789"}, 3, 12)
+
+	fn(100, []string{"abc", "abc", "abc"}, 1, 3)
+	fn(100, []string{"abc", "def", "abc", "def"}, 2, 6)
 }
