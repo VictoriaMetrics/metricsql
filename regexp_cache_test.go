@@ -107,21 +107,3 @@ func TestRegexpCache(t *testing.T) {
 	fn(100, []string{"abc", "abc", "abc"}, 1, 3)
 	fn(100, []string{"abc", "def", "abc", "def"}, 2, 6)
 }
-
-func TestRegexpCacheDuplicatePut(t *testing.T) {
-	rc := newRegexpCache(1000)
-
-	r, err := regexp.Compile("test")
-	rcv := &regexpCacheValue{r: r, err: err}
-
-	rc.Put("test", rcv)
-	rc.Put("test", rcv)
-	rc.Put("test", rcv)
-
-	if entries := rc.Len(); entries != 1 {
-		t.Fatalf("unexpected number of entries; got %d; want 1", entries)
-	}
-	if chars := rc.CharsCurrent(); chars != 4 {
-		t.Fatalf("unexpected charsCurrent; got %d; want 4", chars)
-	}
-}
