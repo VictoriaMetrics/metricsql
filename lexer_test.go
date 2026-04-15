@@ -236,6 +236,26 @@ func TestAppendEscapedIdent(t *testing.T) {
 	f("\u202c", `\u202c`)
 }
 
+func TestAppendQuotedIdent(t *testing.T) {
+	f := func(s, resultExpected string) {
+		t.Helper()
+		result := appendQuotedIdent(nil, s)
+		if string(result) != resultExpected {
+			t.Fatalf("unexpected result for appendQuotedIdent(%q); got %q; want %q", s, result, resultExpected)
+		}
+	}
+	f(``, `""`)
+	f(`a`, `"a"`)
+	f(`foo bar`, `"foo bar"`)
+	f(`foo"bar`, `"foo\"bar"`)
+	f(`foo\bar`, `"foo\\bar"`)
+	f(`a"b\c"d`, `"a\"b\\c\"d"`)
+	f(`"`, `"\""`)
+	f(`\`, `"\\"`)
+	f(`\\`, `"\\\\"`)
+	f(`"quoted"`, `"\"quoted\""`)
+}
+
 func TestScanIdent(t *testing.T) {
 	f := func(s, resultExpected string) {
 		t.Helper()

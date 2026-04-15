@@ -110,6 +110,8 @@ func TestPrettifySuccess(t *testing.T) {
 	another(`foo{"bar3"="baz"}`, `foo{bar3="baz"}`)
 	same(`"metr\"ic"`)
 	same(`'metr"ic'`)
+	same(`{foo="bar","la\"bel"="val"}`)
+	same(`{"metr\\ic"}`)
 	same(`{"3foo", bar="baz"}`)
 	same(`foo{bar="baz",x="y" or q="w",r="t"}`)
 	same(`foo{bar="baz"} + rate(x{y="x"}[5m] offset 1h)`)
