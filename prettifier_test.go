@@ -116,6 +116,9 @@ func TestPrettifySuccess(t *testing.T) {
 	same(`foo{bar="baz",x="y" or q="w",r="t"}`)
 	same(`foo{bar="baz"} + rate(x{y="x"}[5m] offset 1h)`)
 
+	// Verify that long escaped metric names are preserved when they are the only selector
+	same(`{"3foobar_baz_namespace_pod_name_container_name_container_cpu_usage_seconds_total_sum_rate"}`)
+
 	// Verify that empty label filters aren't added to long metric names
 	same(`foobar_baz:namespace_pod_name_container_name:container_cpu_usage_seconds_total:sum_rate`)
 	another(`foobar_baz:namespace_pod_name_container_name:container_cpu_usage_seconds_total:sum_rate{}`,
