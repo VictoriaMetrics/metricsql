@@ -1933,11 +1933,11 @@ func (be *BinaryOpExpr) appendStringNoKeepMetricNames(dst []byte) []byte {
 }
 
 func (be *BinaryOpExpr) needLeftParens() bool {
-	return needBinaryOpArgParens(be.Left, be.Op, false)
+	return needBinaryOpArgParens(be.Left, be.Op)
 }
 
 func (be *BinaryOpExpr) needRightParens() bool {
-	if needBinaryOpArgParens(be.Right, be.Op, true) {
+	if needBinaryOpArgParens(be.Right, be.Op) {
 		return true
 	}
 	switch t := be.Right.(type) {
@@ -1974,7 +1974,7 @@ func (be *BinaryOpExpr) appendModifiers(dst []byte) []byte {
 	return dst
 }
 
-func needBinaryOpArgParens(arg Expr, parentOp string, isRight bool) bool {
+func needBinaryOpArgParens(arg Expr, parentOp string) bool {
 	switch t := arg.(type) {
 	case *BinaryOpExpr:
 		// Parens are required when the child op priority not equal to parent o one.
@@ -1984,15 +1984,6 @@ func needBinaryOpArgParens(arg Expr, parentOp string, isRight bool) bool {
 		}
 
 		// Same op: parens are only needed when the sub-expression is not a simple leaf chain.
-		if t.Op != parentOp {
-			if isRight && !isRightAssociativeBinaryOp(parentOp) {
-				return true
-			}
-			if !isRight && isRightAssociativeBinaryOp(parentOp) {
-				return true
-			}
-		}
-
 		return !isBinaryOpLeafSimple(t)
 	case *RollupExpr:
 		if be, ok := t.Expr.(*BinaryOpExpr); ok && be.KeepMetricNames {
