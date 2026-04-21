@@ -382,9 +382,9 @@ func TestOptimize(t *testing.T) {
 	f(`rate(sum(foo[5m:]) by (baz)) + bar{baz="a"}`, `rate(sum(foo{baz="a"}[5m:]) by(baz)) + bar{baz="a"}`)
 
 	// binary ops with constants or scalars
-	f(`100 * foo / bar{baz="a"}`, `100 * foo{baz="a"} / bar{baz="a"}`)
-	f(`foo * 100 / bar{baz="a"}`, `foo{baz="a"} * 100 / bar{baz="a"}`)
-	f(`foo / bar{baz="a"} * 100`, `foo{baz="a"} / bar{baz="a"} * 100`)
+	f(`100 * foo / bar{baz="a"}`, `(100 * foo{baz="a"}) / bar{baz="a"}`)
+	f(`foo * 100 / bar{baz="a"}`, `(foo{baz="a"} * 100) / bar{baz="a"}`)
+	f(`foo / bar{baz="a"} * 100`, `(foo{baz="a"} / bar{baz="a"}) * 100`)
 	f(`scalar(x) * foo / bar{baz="a"}`, `(scalar(x) * foo{baz="a"}) / bar{baz="a"}`)
 	f(`SCALAR(x) * foo / bar{baz="a"}`, `(SCALAR(x) * foo{baz="a"}) / bar{baz="a"}`)
 	f(`100 * on(foo) bar{baz="z"} + a`, `(100 * on(foo) bar{baz="z"}) + a`)
