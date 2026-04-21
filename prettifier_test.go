@@ -280,4 +280,6 @@ x + sum(y)`)
 	// Verify that exact match __name__ still works
 	another(`{__name__="foo"}`, `foo`)
 	another(`{__name__="foo",bar="baz"}`, `foo{bar="baz"}`)
+
+	another(`10 - (3 + 3 + 4)`, `10 - ((3 + 3) + 4)`)
 }
