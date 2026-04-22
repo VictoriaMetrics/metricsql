@@ -181,6 +181,12 @@ func TestParseSuccess(t *testing.T) {
 	another(`\温\度{\房\间="水电费"}[5m] offset 10m`, `温度{房间="水电费"}[5m] offset 10m`)
 	same(`sum(fo\|o) by(b\|a,x)`)
 	another(`sum(x) by (b\x7Ca)`, `sum(x) by(b\|a)`)
+	another(`fo\xF3`, `foó`)
+	another(`fo\u00F3`, `foó`)
+	another(`{__name__="fo\xF3"}`, `foó`)
+	another(`{__name__="fo\xF3"}`, `foó`)
+	another(`"\n\tfo\xF3"`, `"\n\tfoó"`)
+	another(`温度{房间="水电费\xF3"}[5m] offset 10m`, `温度{房间="水电费ó"}[5m] offset 10m`)
 
 	// Duplicate filters
 	same(`foo{a="b",a="c",b="d"}`)
