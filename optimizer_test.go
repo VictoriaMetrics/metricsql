@@ -192,6 +192,17 @@ func TestOptimize(t *testing.T) {
 	f(`a + on(x) group_right(*) prefix "foo_" b{x="a"}`, `a{x="a"} + on(x) group_right(*) prefix "foo_" b{x="a"}`)
 	f(`a{x="a"} + on(x) group_right(*) prefix "foo_" prefix`, `a{x="a"} + on(x) group_right(*) prefix "foo_" (prefix{x="a"})`)
 	f(`foo{a="a"} ifnot foo{b="b"}`, `foo{a="a"} ifnot foo{a="a",b="b"}`)
+	// with fill modifiers
+	f(`foo + bar{a="b"}`, `foo{a="b"} + bar{a="b"}`)
+	f(`foo + fill(0) bar{a="b"}`, `foo + fill(0) bar{a="b"}`)
+	f(`foo + fill_left(0) bar{a="b"}`, `foo{a="b"} + fill_left(0) bar{a="b"}`)
+	f(`foo{a="b"} + fill_right(0) bar`, `foo{a="b"} + fill_right(0) bar{a="b"}`)
+	f(`foo{x="y"} + fill_left(0) bar{a="b"}`, `foo{a="b",x="y"} + fill_left(0) bar{a="b"}`)
+	f(`foo{x="y"} + fill_right(0) bar{a="b"}`, `foo{x="y"} + fill_right(0) bar{a="b",x="y"}`)
+	f(`foo + fill_left(0) fill_right(1) bar{a="b"}`, `foo + fill_left(0) fill_right(1) bar{a="b"}`)
+	f(`(foo + bar{a="b"}) + fill_left(0) fill_right(1) baz`, `(foo{a="b"} + bar{a="b"}) + fill_left(0) fill_right(1) baz`)
+	f(`foo + fill_left(0) fill_right(1) (bar + baz{a="b"})`, `foo + fill_left(0) fill_right(1) (bar{a="b"} + baz{a="b"})`)
+	f(`foo + fill_left(0) (bar + baz{a="b"})`, `foo{a="b"} + fill_left(0) (bar{a="b"} + baz{a="b"})`)
 
 	// specially handled binary expressions
 	f(`foo{a="b"} or bar{x="y"}`, `foo{a="b"} or bar{x="y"}`)
