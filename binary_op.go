@@ -73,6 +73,16 @@ func isBinaryOp(op string) bool {
 	return binaryOps[op]
 }
 
+func isSetOperator(op string) bool {
+	op = strings.ToLower(op)
+	switch op {
+	case "and", "or", "unless", "if", "ifnot", "default":
+		return true
+	default:
+		return false
+	}
+}
+
 func binaryOpPriority(op string) int {
 	op = strings.ToLower(op)
 	return binaryOpPriorities[op]

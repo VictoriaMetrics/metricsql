@@ -358,6 +358,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`a + fill_right`, `a + (fill_right)`)
 	another(`a + fill_left`, `a + (fill_left)`)
 	another(`a + fill`, `a + (fill)`)
+	another(`m + fill(-1) n + fill(2) w `, `(m + fill(-1) n) + fill(2) w`)
 	another(`5 - 1 + 3 * 2 ^ 2 ^ 3 - 2  OR Metric {Bar= "Baz", aaa!="bb",cc=~"dd" ,zz !~"ff" } `,
 		`770 or Metric{Bar="Baz",aaa!="bb",cc=~"dd",zz!~"ff"}`)
 
@@ -1029,4 +1030,12 @@ func TestParseError(t *testing.T) {
 	f(`with (x={a="b" or c="d"}) x{d="e" or z="c"}`)
 	f(`with (x={a="b" or c="d"}) {x,d="e"}`)
 	f(`with (x={a="b" or c="d"}) {x,d="e" or z="c"}`)
+
+	// invalid fill modifier
+	f(`m + fill on(job) n`)
+	f(`m == fill(0) bool n`)
+	f(`m + fill(0) on(job)  n`)
+	f(`m + on(job) fill(0) group_left() n`)
+	f(`m and fill(0) n`)
+	f(`m + bool group_left m2 fill(0)`)
 }

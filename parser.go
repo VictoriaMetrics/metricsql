@@ -519,6 +519,9 @@ func (p *parser) parseFillModifier(be *BinaryOpExpr) (bool, error) {
 	if !isBinaryOpFillModifier(p.lex.Token) {
 		return false, nil
 	}
+	if isSetOperator(be.Op) {
+		return false, fmt.Errorf(`fill modifier cannot be applied to %q`, be.Op)
+	}
 	op := strings.ToLower(p.lex.Token)
 	if err := p.lex.Next(); err != nil {
 		return false, err
