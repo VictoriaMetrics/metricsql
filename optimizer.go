@@ -181,6 +181,7 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 				// {f1} * on(f2) group_left() {f2} -> {f1, f2}
 				// {f1} * on(f1, f2) group_left() {f2} -> {f1, f2}
 				// {f1} * on(f3) group_left() {f2} -> {f1}
+				lfsLeft = filterLabelFiltersIgnoring(lfsLeft, t.JoinModifier.Args)
 				lfsRight = TrimFiltersByGroupModifier(lfsRight, t)
 				return unionLabelFilters(lfsLeft, lfsRight)
 			case "group_right":
@@ -191,6 +192,7 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 				// {f1} * on(f1, f2) group_right() {f2} -> {f1, f2}
 				// {f1} * on(f3) group_right() {f2} -> {f2}
 				lfsLeft = TrimFiltersByGroupModifier(lfsLeft, t)
+				lfsRight = filterLabelFiltersIgnoring(lfsRight, t.JoinModifier.Args)
 				return unionLabelFilters(lfsLeft, lfsRight)
 			default:
 				// {f1} * {f2} -> {f1, f2}

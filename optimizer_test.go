@@ -118,6 +118,8 @@ func TestGetCommonLabelFilters(t *testing.T) {
 	f(`{a="b"} unLEss on(c) {c="d"}`, `{}`)
 	f(`{a="b"} unless on(a,c) {c="d"}`, `{a="b"}`)
 	f(`{a="b"} Unless on(x) {c="d"}`, `{}`)
+	f(`foo{a="x",b="y"} * on(instance) group_left(a) bar`, `{b="y"}`)
+	f(`foo * on(instance) group_right(a) bar{a="x",b="y"}`, `{b="y"}`)
 
 	// common filters for 'or' filters
 	f(`{a="b" or c="d",a="b"}`, `{a="b"}`)
@@ -182,6 +184,8 @@ func TestOptimize(t *testing.T) {
 	f(`{a="b"} + ({c="d"} * on(c) group_left() {e="f"})`, `{a="b",c="d"} + ({c="d"} * on(c) group_left() {c="d",e="f"})`)
 	f(`{a="b"} + ({c="d"} * on(e) group_left() {e="f"})`, `{a="b",c="d",e="f"} + ({c="d",e="f"} * on(e) group_left() {e="f"})`)
 	f(`{a="b"} + ({c="d"} * on(x) group_left() {e="f"})`, `{a="b",c="d"} + ({c="d"} * on(x) group_left() {e="f"})`)
+	f(`(foo * on(instance) group_right(a) bar{a="x"}) and on(a) baz`, `(foo * on(instance) group_right(a) bar{a="x"}) and on(a) baz`)
+	f(`(foo{a="x"} * on(instance) group_left(a) bar) and on(a) baz`, `(foo{a="x"} * on(instance) group_left(a) bar) and on(a) baz`)
 	f(`{a="b"} + ({c="d"} * on() group_right() {e="f"})`, `{a="b",e="f"} + ({c="d"} * on() group_right() {e="f"})`)
 	f(`{a="b"} + ({c="d"} * on(a) group_right() {e="f"})`, `{a="b",e="f"} + ({a="b",c="d"} * on(a) group_right() {a="b",e="f"})`)
 	f(`{a="b"} + ({c="d"} * on(c) group_right() {e="f"})`, `{a="b",c="d",e="f"} + ({c="d"} * on(c) group_right() {c="d",e="f"})`)
