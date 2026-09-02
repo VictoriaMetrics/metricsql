@@ -96,11 +96,28 @@ func TestIsLikelyInvalid(t *testing.T) {
 
 	// Explicit subqueries are allowed
 	f(`sum_over_time((up > 0)[5m:1s])`, false)
-	f(`rate(sum(foo)[5m])`, false)
+	f(`sum_over_time((up > 0)[5m:])`, false)
 	f(`rate(sum(foo)[5m:3s])`, false)
+	f(`rate(sum(foo)[5m:])`, false)
 
-	// Implicit step in the subquery is OK
-	f(`sum_over_time((up > 0)[5m])`, false)
+	// A subquery must be explicit, since `q[d]` is allowed only for series selectors in Prometheus.
+	// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/6752
+	f(`sum_over_time((up > 0)[5m])`, true)
+	f(`rate(sum(foo)[5m])`, true)
+	f(`sum by (job) (foo == bool 0)[24h]`, true)
+	f(`sum(foo)[5m]`, true)
+	f(`(foo + bar)[5m]`, true)
+	f(`1 + sum(foo)[5m]`, true)
+	f(`(foo offset 1h)[5m]`, true)
+
+	// The timestamp carve-out above doesn't cover the lookbehind window of its arg
+	f(`timestamp(sum(foo)[5m])`, true)
+	f(`timestamp(sum(foo)[5m:])`, false)
+
+	// A series selector may keep the bare lookbehind window
+	f(`foo[5m] offset 1h`, false)
+	f(`sum by (job) (foo == bool 0)[24h:]`, false)
+	f(`sum by (job) (foo == bool 0)[24h:1m]`, false)
 
 	// This is OK, since it is supported by Prometheus
 	f(`rate(foo{bar=~"baz"}[5m:1s])`, false)
