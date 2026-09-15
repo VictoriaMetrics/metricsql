@@ -181,10 +181,8 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 				// {f1} * on(f2) group_left() {f2} -> {f1, f2}
 				// {f1} * on(f1, f2) group_left() {f2} -> {f1, f2}
 				// {f1} * on(f3) group_left() {f2} -> {f1}
-				lfsJoined := getJoinModifierLabelFilters(lfsRight, t)
 				lfsLeft = trimFiltersByJoinModifier(lfsLeft, t)
 				lfsRight = TrimFiltersByGroupModifier(lfsRight, t)
-				lfsRight = unionLabelFilters(lfsRight, lfsJoined)
 				return unionLabelFilters(lfsLeft, lfsRight)
 			case "group_right":
 				// {f1} * group_right() {f2} -> {f1, f2}
@@ -193,9 +191,7 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 				// {f1} * on(f2) group_right() {f2} -> {f2}
 				// {f1} * on(f1, f2) group_right() {f2} -> {f1, f2}
 				// {f1} * on(f3) group_right() {f2} -> {f2}
-				lfsJoined := getJoinModifierLabelFilters(lfsLeft, t)
 				lfsLeft = TrimFiltersByGroupModifier(lfsLeft, t)
-				lfsLeft = unionLabelFilters(lfsLeft, lfsJoined)
 				lfsRight = trimFiltersByJoinModifier(lfsRight, t)
 				return unionLabelFilters(lfsLeft, lfsRight)
 			default:
@@ -387,13 +383,11 @@ func trimFiltersByJoinModifier(lfs []LabelFilter, be *BinaryOpExpr) []LabelFilte
 			continue
 		}
 
-		// The destination label isn't guaranteed to preserve its original
-		// value after the join. It may be overwritten, or removed when the
-		// source label is absent.
+		// SetTags may remove the original label when it doesn't exist
+		// on the source side.
 		overwrittenLabels = append(overwrittenLabels, arg)
 
-		// With a prefix, the copied source label is exposed under the
-		// prefixed name, so that destination label may also be overwritten.
+		// If the source label exists, it is copied under the prefixed name.
 		if prefix != "" {
 			overwrittenLabels = append(overwrittenLabels, prefix+arg)
 		}
@@ -401,69 +395,7 @@ func trimFiltersByJoinModifier(lfs []LabelFilter, be *BinaryOpExpr) []LabelFilte
 
 	return filterLabelFiltersIgnoring(lfs, overwrittenLabels)
 }
-func getJoinModifierLabelFilters(lfs []LabelFilter, be *BinaryOpExpr) []LabelFilter {
-	args := be.JoinModifier.Args
-	if len(args) == 0 {
-		return nil
-	}
 
-	skipTags := make(map[string]struct{})
-	if strings.EqualFold(be.GroupModifier.Op, "on") {
-		for _, arg := range be.GroupModifier.Args {
-			skipTags[arg] = struct{}{}
-		}
-	}
-
-	var prefix string
-	if be.JoinModifierPrefix != nil {
-		prefix = be.JoinModifierPrefix.S
-	}
-
-	if len(args) == 1 && args[0] == "*" {
-		var lfsNew []LabelFilter
-		for _, lf := range lfs {
-			if _, ok := skipTags[lf.Label]; ok {
-				continue
-			}
-
-			if !canCopyJoinLabelFilter(lf) {
-				continue
-			}
-
-			lf.Label = prefix + lf.Label
-			lfsNew = append(lfsNew, lf)
-		}
-		return lfsNew
-	}
-
-	joinTags := make(map[string]struct{}, len(args))
-	for _, arg := range args {
-		if _, ok := skipTags[arg]; ok {
-			continue
-		}
-		joinTags[arg] = struct{}{}
-	}
-
-	var lfsNew []LabelFilter
-	for _, lf := range lfs {
-		if _, ok := joinTags[lf.Label]; !ok {
-			continue
-		}
-
-		if prefix != "" && !canCopyJoinLabelFilter(lf) {
-			continue
-		}
-
-		lf.Label = prefix + lf.Label
-		lfsNew = append(lfsNew, lf)
-	}
-
-	return lfsNew
-}
-
-func canCopyJoinLabelFilter(lf LabelFilter) bool {
-	return !lf.IsNegative && !lf.IsRegexp && lf.Value != ""
-}
 func getCommonLabelFiltersWithoutMetricName(lfss [][]LabelFilter) []LabelFilter {
 	if len(lfss) == 0 {
 		return nil
