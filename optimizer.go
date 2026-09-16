@@ -383,11 +383,13 @@ func trimFiltersByJoinModifier(lfs []LabelFilter, be *BinaryOpExpr) []LabelFilte
 			continue
 		}
 
-		// SetTags may remove the original label when it doesn't exist
-		// on the source side.
+		// The destination label isn't guaranteed to preserve its original
+		// value after the join. It may be overwritten, or removed when the
+		// source label is absent.
 		overwrittenLabels = append(overwrittenLabels, arg)
 
-		// If the source label exists, it is copied under the prefixed name.
+		// With a prefix, the copied source label is exposed under the
+		// prefixed name, so that destination label may also be overwritten.
 		if prefix != "" {
 			overwrittenLabels = append(overwrittenLabels, prefix+arg)
 		}
