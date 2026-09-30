@@ -166,13 +166,14 @@ func parsePositiveNumber(s string) (float64, error) {
 	if isSpecialIntegerPrefix(s) {
 		n, err := strconv.ParseInt(s, 0, 64)
 		if err != nil {
-			if _, floatErr := strconv.ParseFloat(strings.ToLower(s), 64); floatErr != nil {
-				return 0, err
-			}
 			// A number with a leading zero, such as 09.5 or 07e8, is not
 			// valid for base-0 ParseInt. Parse it as decimal, like
 			// Prometheus/Mimir do (see victoria-metrics#11621).
-			return parsePositiveFloat(strings.ToLower(s))
+			ls := strings.ToLower(s)
+			if _, floatErr := strconv.ParseFloat(ls, 64); floatErr != nil {
+				return 0, err
+			}
+			return parsePositiveFloat(ls)
 		}
 		return float64(n), nil
 	}
