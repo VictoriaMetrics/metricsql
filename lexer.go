@@ -173,7 +173,7 @@ func parsePositiveNumber(s string) (float64, error) {
 			if _, floatErr := strconv.ParseFloat(ls, 64); floatErr != nil {
 				return 0, err
 			}
-			return parsePositiveFloat(ls)
+			return strconv.ParseFloat(ls, 64)
 		}
 		return float64(n), nil
 	}
@@ -234,14 +234,6 @@ func parsePositiveNumber(s string) (float64, error) {
 		return 0, err
 	}
 	return v * m, nil
-}
-
-func parsePositiveFloat(s string) (float64, error) {
-	v, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, err
-	}
-	return v, nil
 }
 
 func scanPositiveNumber(s string) (string, error) {
@@ -537,11 +529,6 @@ func scanSpecialIntegerPrefix(s string) (skipChars int, isHex bool) {
 		return 0, false
 	}
 	if isDecimalChar(s[0]) {
-		if s[0] >= '8' {
-			// 08 and 09 are not valid octal digits - parse as decimal number
-			// with a leading zero, like Prometheus/Mimir do (see victoria-metrics#11621).
-			return 0, false
-		}
 		// octal number: 0123
 		return 1, false
 	}
