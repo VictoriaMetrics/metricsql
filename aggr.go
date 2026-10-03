@@ -41,6 +41,7 @@ var aggrFuncs = map[string]bool{
 	"topk_median":    true,
 	"topk_last":      true,
 	"topk_min":       true,
+	"utilization":    true,
 	"zscore":         true,
 }
 

@@ -456,6 +456,8 @@ func TestParseSuccess(t *testing.T) {
 	same(`sum(http_server_request) by()`)
 	same(`sum(http_server_request) by(job)`)
 	same(`sum(http_server_request) without(job,foo)`)
+	same(`utilization(http_server_request) by(job)`)
+	same(`utilization(http_server_request) without(job,foo)`)
 	another(`sum(x,y,) without (a,b,)`, `sum(x, y) without(a,b)`)
 	another(`sum by () (xx)`, `sum(xx) by()`)
 	another(`sum by (s) (xx)[5s]`, `(sum(xx) by(s))[5s]`)

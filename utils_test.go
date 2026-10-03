@@ -167,6 +167,8 @@ func TestIsSupportedFunction(t *testing.T) {
 	// aggregate function
 	f("sum", true)
 	f("aVG", true)
+	f("share", true)
+	f("utilization", true)
 
 	// Unknown function
 	f("foo", false)
