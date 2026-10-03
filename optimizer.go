@@ -746,7 +746,7 @@ func getAggrArgIdxForOptimization(funcName string, args []Expr) int {
 func canAcceptMultipleArgsForAggrFunc(funcName string) bool {
 	switch strings.ToLower(funcName) {
 	case "any", "avg", "count", "distinct", "geomean", "group", "histogram", "mad", "max",
-		"median", "min", "mode", "share", "stddev", "stdvar", "sum", "sum2", "zscore":
+		"median", "min", "mode", "share", "stddev", "stdvar", "sum", "sum2", "utilization", "zscore":
 		return true
 	default:
 		return false
