@@ -1,6 +1,7 @@
 package metricsql
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -167,6 +168,9 @@ func parsePositiveNumber(s string) (float64, error) {
 		n, err := strconv.ParseInt(s, 0, 64)
 		if err == nil {
 			return float64(n), nil
+		}
+		if !errors.Is(err, strconv.ErrSyntax) {
+			return 0, err
 		}
 		return strconv.ParseFloat(s, 64)
 	}

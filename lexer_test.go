@@ -159,6 +159,7 @@ func TestParsePositiveNumberFailure(t *testing.T) {
 	f("")
 	f("0xqwert")
 	f("0o78")
+	f("07777777777777777777777")
 	f("0b12")
 	f("foobar")
 	f("234.foobar")
