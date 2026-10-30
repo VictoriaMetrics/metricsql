@@ -1,7 +1,6 @@
 package metricsql
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -169,9 +168,8 @@ func parsePositiveNumber(s string) (float64, error) {
 		if err == nil {
 			return float64(n), nil
 		}
-		if !errors.Is(err, strconv.ErrSyntax) {
-			return 0, err
-		}
+		// Fall back to float parser for Prometheus compatibility.
+		// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/11621
 		return strconv.ParseFloat(s, 64)
 	}
 	s = strings.ToLower(s)
