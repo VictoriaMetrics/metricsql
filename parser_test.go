@@ -264,6 +264,10 @@ func TestParseSuccess(t *testing.T) {
 	another(`+0X3B`, `0X3B`)
 	same(`0b1011`)
 	same(`073`)
+	same(`09`)
+	same(`hour() > 09`)
+	another(`09 + 1`, `10`)
+	another(`-0755`, `-493`)
 	another(`-0o12`, `-10`)
 
 	// durationExpr
