@@ -245,6 +245,7 @@ func TestOptimize(t *testing.T) {
 	f(`sum(foo{bar="baz"}) without (x) / a{b="c"}`, `sum(foo{b="c",bar="baz"}) without(x) / a{b="c",bar="baz"}`)
 	f(`sum(foo{bar="baz"}) without (bar,b) / a{b="c"}`, `sum(foo{bar="baz"}) without(bar,b) / a{b="c"}`)
 	f(`sum(foo, bar) by (a) + baz{a="b"}`, `sum(foo{a="b"}, bar{a="b"}) by(a) + baz{a="b"}`)
+	f(`utilization(foo, bar) by (a) + baz{a="b"}`, `utilization(foo{a="b"}, bar{a="b"}) by(a) + baz{a="b"}`)
 	f(`topk(3, foo) by (baz,x) + bar{baz="a"}`, `topk(3, foo{baz="a"}) by(baz,x) + bar{baz="a"}`)
 	f(`topk(a, foo) without (x,y) + bar{baz="a"}`, `topk(a, foo{baz="a"}) without(x,y) + bar{baz="a"}`)
 	f(`a{b="c"} + quantiles("foo", 0.1, 0.2, bar{x="y"}) by (b, x, y)`, `a{b="c",x="y"} + quantiles("foo", 0.1, 0.2, bar{b="c",x="y"}) by(b,x,y)`)
