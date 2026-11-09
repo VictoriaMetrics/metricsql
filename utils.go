@@ -95,10 +95,8 @@ func IsLikelyInvalid(e Expr) bool {
 			// It requires the explicit `q[d:]` or `q[d:step]` form for everything else,
 			// while MetricsQL accepts `q[d]` there and turns it into a subquery.
 			// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/6752
-			if re.Window != nil && !re.ForSubquery() {
-				if _, ok := re.Expr.(*MetricExpr); !ok {
-					hasImplicitConversion = true
-				}
+			if re.Window != nil && !re.ForSubquery() && !isRawSamplesExpr(re.Expr) {
+				hasImplicitConversion = true
 			}
 			return
 		}
@@ -124,12 +122,12 @@ func IsLikelyInvalid(e Expr) bool {
 		arg := fe.Args[idx]
 		re, ok := arg.(*RollupExpr)
 		if !ok {
-			if _, ok = arg.(*MetricExpr); !ok {
+			if !isRawSamplesExpr(arg) {
 				hasImplicitConversion = true
 			}
 			return
 		}
-		if _, ok := re.Expr.(*MetricExpr); ok {
+		if isRawSamplesExpr(re.Expr) {
 			return
 		}
 		if re.Window == nil {
@@ -151,6 +149,9 @@ func IsSupportedFunction(funcName string) bool {
 	if IsAggrFunc(funcName) {
 		return true
 	}
+	if IsRawTransformFunc(funcName) {
+		return true
+	}
 	return false
 }
 
@@ -170,4 +171,15 @@ func checkSupportedFunctions(e Expr) error {
 		}
 	})
 	return err
+}
+
+func isRawSamplesExpr(e Expr) bool {
+	switch expr := e.(type) {
+	case *MetricExpr:
+		return true
+	case *FuncExpr:
+		return IsRawTransformFunc(expr.Name)
+	default:
+		return false
+	}
 }

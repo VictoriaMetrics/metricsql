@@ -80,7 +80,6 @@ func TestIsLikelyInvalid(t *testing.T) {
 			t.Fatalf("unexpected result for IsLikelyInvalid(%q); got %v; want %v", q, result, resultExpected)
 		}
 	}
-
 	f("1", false)
 	f(`foo{bar="baz"}`, false)
 
@@ -140,6 +139,11 @@ func TestIsLikelyInvalid(t *testing.T) {
 
 	// invalid number of args
 	f(`quantile_over_time(foo)`, false)
+
+	f(`rate(merge_latest(foo, "revision"))`, false)
+	f(`rate(merge_latest(foo, "revision")[5m] offset 5m)`, false)
+	f(`rate(merge_latest(foo, "revision") offset 5m)`, false)
+
 }
 
 func TestIsSupportedFunction(t *testing.T) {

@@ -411,4 +411,11 @@ func TestOptimize(t *testing.T) {
 	f(`scalar(x) * foo / bar{baz="a"}`, `(scalar(x) * foo{baz="a"}) / bar{baz="a"}`)
 	f(`SCALAR(x) * foo / bar{baz="a"}`, `(SCALAR(x) * foo{baz="a"}) / bar{baz="a"}`)
 	f(`100 * on(foo) bar{baz="z"} + a`, `(100 * on(foo) bar{baz="z"}) + a`)
+
+	// raw transform merge_latest
+	f(`rate(merge_latest(http_requests, "revision")) + b`, `rate(merge_latest(http_requests, "revision")) + b`)
+	f(`rate(merge_latest(http_requests, "revision")) + b{env="dev"}`, `rate(merge_latest(http_requests{env="dev"}, "revision")) + b{env="dev"}`)
+	// revision label filter doesn't propogated in both directions
+	f(`merge_latest(a{revision="1"}, "revision") + b`, `merge_latest(a{revision="1"}, "revision") + b`)
+	f(`merge_latest(a{revision="1",x="y"}, "revision") + b`, `merge_latest(a{revision="1",x="y"}, "revision") + b{x="y"}`)
 }

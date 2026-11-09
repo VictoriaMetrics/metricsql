@@ -4,6 +4,16 @@ import (
 	"strings"
 )
 
+var rawTransformFuncs = map[string]bool{
+	"merge_latest": true,
+}
+
+// IsRawTransformFunc returns whether funcName is known raw transform function.
+func IsRawTransformFunc(funcName string) bool {
+	s := strings.ToLower(funcName)
+	return rawTransformFuncs[s]
+}
+
 var transformFuncs = map[string]bool{
 	"":                           true, // empty func is a synonym to union
 	"abs":                        true,
@@ -124,5 +134,4 @@ var transformFuncs = map[string]bool{
 func IsTransformFunc(funcName string) bool {
 	s := strings.ToLower(funcName)
 	return transformFuncs[s]
-
 }
