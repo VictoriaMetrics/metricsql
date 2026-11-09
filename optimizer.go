@@ -118,6 +118,8 @@ func getCommonLabelFilters(e Expr) []LabelFilter {
 			return getCommonLabelFiltersForCountValuesOverTime(args)
 		case "range_normalize", "union", "":
 			return intersectLabelFiltersForAllArgs(args)
+		case "merge_latest":
+			return getCommonLabelFiltersForMergeLatest(args)
 		default:
 			arg := getFuncArgForOptimization(t.Name, args)
 			if arg == nil {
@@ -308,6 +310,15 @@ func getCommonLabelFiltersForLabelSet(args []Expr) []LabelFilter {
 	return lfs
 }
 
+func getCommonLabelFiltersForMergeLatest(args []Expr) []LabelFilter {
+	if len(args) != 2 {
+		return nil
+	}
+	lfs := getCommonLabelFilters(args[0])
+	lfs = dropLabelFiltersForLabelNames(lfs, args[1:])
+	return lfs
+}
+
 func trimFiltersByAggrModifier(lfs []LabelFilter, afe *AggrFuncExpr) []LabelFilter {
 	switch strings.ToLower(afe.Modifier.Op) {
 	case "by":
@@ -470,6 +481,8 @@ func pushdownBinaryOpFiltersInplace(lfs []LabelFilter, e Expr) {
 			pushdownLabelFiltersForCountValuesOverTime(lfs, args)
 		case "range_normalize", "union", "":
 			pushdownLabelFiltersForAllArgs(lfs, args)
+		case "merge_latest":
+			pushdownLabelFiltersForMergeLatest(lfs, args)
 		default:
 			arg := getFuncArgForOptimization(t.Name, args)
 			if arg != nil {
@@ -566,6 +579,14 @@ func pushdownLabelFiltersForLabelSet(lfs []LabelFilter, args []Expr) {
 	}
 	lfs = dropLabelFiltersForLabelNames(lfs, labelNames)
 	pushdownBinaryOpFiltersInplace(lfs, arg)
+}
+
+func pushdownLabelFiltersForMergeLatest(lfs []LabelFilter, args []Expr) {
+	if len(args) != 2 {
+		return
+	}
+	lfs = dropLabelFiltersForLabelNames(lfs, args[1:])
+	pushdownBinaryOpFiltersInplace(lfs, args[0])
 }
 
 func intersectLabelFilters(lfsA, lfsB []LabelFilter) []LabelFilter {
@@ -721,6 +742,9 @@ func getFuncArgIdxForOptimization(funcName string, args []Expr) int {
 	}
 	if IsAggrFunc(funcName) {
 		return getAggrArgIdxForOptimization(funcName, args)
+	}
+	if IsRawTransformFunc(funcName) {
+		return -1
 	}
 	return -1
 }

@@ -662,6 +662,8 @@ func TestParseSuccess(t *testing.T) {
 	another(`increase(m[$__rate_interval] offset -$__rate_interval) + -$__rate_interval`, `increase(m offset -1i) + (0 - 1i)`)
 	another(`rate(m[$__rate_interval:5m])`, `rate(m[:5m])`)
 	another(`rate(m[$__interval:5m])`, `rate(m[:5m])`)
+
+	same(`merge_latest(up, "revision_id")`)
 }
 
 func TestParseError(t *testing.T) {
