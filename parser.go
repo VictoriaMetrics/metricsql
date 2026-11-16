@@ -7,6 +7,22 @@ import (
 	"sync"
 )
 
+// maxExprDepth limits the maximum nesting depth of a parsed expression.
+// Deeper expressions are rejected with an error in order to prevent
+// stack exhaustion in recursive parsing and processing paths.
+const maxExprDepth = 500
+
+// maxExprNodes limits the maximum number of parsed expressions (AST nodes).
+// It prevents stack exhaustion in recursive expression processing
+// on long flat expressions such as `a+a+...`.
+const maxExprNodes = 100_000
+
+// maxExpandedExprNodes limits the number of expressions a query may expand
+// to while resolving `WITH` templates. Template references can expand a
+// small query exponentially (e.g. `WITH (f(x)=x+x) f(f(f(...)))`), so the
+// budget is shared across the whole expansion pass.
+const maxExpandedExprNodes = 100_000
+
 // Parse parses MetricsQL query s.
 //
 // All the `WITH` expressions are expanded in the returned Expr.
@@ -21,7 +37,8 @@ func Parse(s string) (Expr, error) {
 
 	// Expand `WITH` expressions.
 	was := getDefaultWithArgExprs()
-	if e, err = expandWithExpr(was, e); err != nil {
+	budget := maxExpandedExprNodes
+	if e, err = expandWithExpr(was, e, &budget); err != nil {
 		return nil, fmt.Errorf(`cannot expand WITH expressions: %s`, err)
 	}
 	e = removeParensExpr(e)
@@ -258,7 +275,9 @@ func simplifyConstantsInplace(args []Expr) {
 // postconditions for all parser.parse* funcs:
 // - p.lex.Token should point to the next token after the parsed token.
 type parser struct {
-	lex lexer
+	lex   lexer
+	depth int
+	exprs int
 }
 
 func isWith(s string) bool {
@@ -422,30 +441,55 @@ func (p *parser) parseExpr() (Expr, error) {
 				return nil, err
 			}
 		}
-		e = balanceBinaryOp(&be)
+		e, err = p.balanceBinaryOp(&be)
+		if err != nil {
+			return nil, err
+		}
 	}
 }
 
-func balanceBinaryOp(be *BinaryOpExpr) Expr {
+func (p *parser) balanceBinaryOp(be *BinaryOpExpr) (Expr, error) {
 	bel, ok := be.Left.(*BinaryOpExpr)
 	if !ok {
-		return be
+		return be, nil
 	}
 	lp := binaryOpPriority(bel.Op)
 	rp := binaryOpPriority(be.Op)
 	if rp < lp {
-		return be
+		return be, nil
 	}
 	if rp == lp && !isRightAssociativeBinaryOp(be.Op) {
-		return be
+		return be, nil
+	}
+	p.depth++
+	defer func() {
+		p.depth--
+	}()
+	if p.depth > maxExprDepth {
+		return nil, fmt.Errorf("the query is too complex: the nesting depth exceeds %d", maxExprDepth)
 	}
 	be.Left = bel.Right
-	bel.Right = balanceBinaryOp(be)
-	return bel
+	e, err := p.balanceBinaryOp(be)
+	if err != nil {
+		return nil, err
+	}
+	bel.Right = e
+	return bel, nil
 }
 
 // parseSingleExpr parses non-binaryOp expressions.
 func (p *parser) parseSingleExpr() (Expr, error) {
+	p.exprs++
+	if p.exprs > maxExprNodes {
+		return nil, fmt.Errorf("the query is too complex: it contains more than %d expressions", maxExprNodes)
+	}
+	p.depth++
+	defer func() {
+		p.depth--
+	}()
+	if p.depth > maxExprDepth {
+		return nil, fmt.Errorf("the query is too complex: the nesting depth exceeds %d", maxExprDepth)
+	}
 	if isWith(p.lex.Token) {
 		err := p.lex.Next()
 		nextToken := p.lex.Token
@@ -739,14 +783,18 @@ funcArgsLabel:
 	}
 }
 
-func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
+func expandWithExpr(was []*withArgExpr, e Expr, budget *int) (Expr, error) {
+	*budget = *budget - 1
+	if *budget < 0 {
+		return nil, fmt.Errorf("the query is too complex: WITH expansion produces more than %d expressions", maxExpandedExprNodes)
+	}
 	switch t := e.(type) {
 	case *BinaryOpExpr:
-		left, err := expandWithExpr(was, t.Left)
+		left, err := expandWithExpr(was, t.Left, budget)
 		if err != nil {
 			return nil, err
 		}
-		right, err := expandWithExpr(was, t.Right)
+		right, err := expandWithExpr(was, t.Right, budget)
 		if err != nil {
 			return nil, err
 		}
@@ -760,7 +808,7 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 		}
 		var joinModifierPrefix *StringExpr
 		if t.JoinModifierPrefix != nil {
-			jmp, err := expandWithExpr(was, t.JoinModifierPrefix)
+			jmp, err := expandWithExpr(was, t.JoinModifierPrefix, budget)
 			if err != nil {
 				return nil, err
 			}
@@ -789,25 +837,25 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 		pe := parensExpr{&be}
 		return &pe, nil
 	case *FuncExpr:
-		args, err := expandWithArgs(was, t.Args)
+		args, err := expandWithArgs(was, t.Args, budget)
 		if err != nil {
 			return nil, err
 		}
 		wa := getWithArgExpr(was, t.Name)
 		if wa != nil {
-			return expandWithExprExt(was, wa, args)
+			return expandWithExprExt(was, wa, args, budget)
 		}
 		fe := *t
 		fe.Args = args
 		return &fe, nil
 	case *AggrFuncExpr:
-		args, err := expandWithArgs(was, t.Args)
+		args, err := expandWithArgs(was, t.Args, budget)
 		if err != nil {
 			return nil, err
 		}
 		wa := getWithArgExpr(was, t.Name)
 		if wa != nil {
-			return expandWithExprExt(was, wa, args)
+			return expandWithExprExt(was, wa, args, budget)
 		}
 		modifierArgs, err := expandModifierArgs(was, t.Modifier.Args)
 		if err != nil {
@@ -818,7 +866,7 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 		ae.Modifier.Args = modifierArgs
 		return &ae, nil
 	case *parensExpr:
-		exprs, err := expandWithArgs(was, *t)
+		exprs, err := expandWithArgs(was, *t, budget)
 		if err != nil {
 			return nil, err
 		}
@@ -843,7 +891,7 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 			if wa == nil {
 				return nil, fmt.Errorf("missing %q value inside StringExpr", token)
 			}
-			eNew, err := expandWithExprExt(was, wa, nil)
+			eNew, err := expandWithExprExt(was, wa, nil, budget)
 			if err != nil {
 				return nil, err
 			}
@@ -861,26 +909,26 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 		}
 		return se, nil
 	case *RollupExpr:
-		eNew, err := expandWithExpr(was, t.Expr)
+		eNew, err := expandWithExpr(was, t.Expr, budget)
 		if err != nil {
 			return nil, err
 		}
 		re := *t
 		re.Expr = eNew
-		re.Window, err = expandDuration(was, re.Window)
+		re.Window, err = expandDuration(was, re.Window, budget)
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse window for %s: %w", re.Expr.AppendString(nil), err)
 		}
-		re.Step, err = expandDuration(was, re.Step)
+		re.Step, err = expandDuration(was, re.Step, budget)
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse step in %s: %w", re.Expr.AppendString(nil), err)
 		}
-		re.Offset, err = expandDuration(was, re.Offset)
+		re.Offset, err = expandDuration(was, re.Offset, budget)
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse offset in %s: %w", re.Expr.AppendString(nil), err)
 		}
 		if t.At != nil {
-			atNew, err := expandWithExpr(was, t.At)
+			atNew, err := expandWithExpr(was, t.At, budget)
 			if err != nil {
 				return nil, err
 			}
@@ -891,7 +939,7 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 		wasNew := make([]*withArgExpr, 0, len(was)+len(t.Was))
 		wasNew = append(wasNew, was...)
 		wasNew = append(wasNew, t.Was...)
-		eNew, err := expandWithExpr(wasNew, t.Expr)
+		eNew, err := expandWithExpr(wasNew, t.Expr, budget)
 		if err != nil {
 			return nil, err
 		}
@@ -929,7 +977,7 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 							}
 							return nil, fmt.Errorf("cannot find WITH template for %q inside %q", lfe.Label, t.AppendString(nil))
 						}
-						eNew, err := expandWithExprExt(was, wa, []Expr{})
+						eNew, err := expandWithExprExt(was, wa, []Expr{}, budget)
 						if err != nil {
 							return nil, err
 						}
@@ -952,7 +1000,7 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 						continue
 					}
 					// convert lfe to LabelFilter.
-					se, err := expandWithExpr(was, lfe.Value)
+					se, err := expandWithExpr(was, lfe.Value, budget)
 					if err != nil {
 						return nil, err
 					}
@@ -1009,7 +1057,7 @@ func expandWithExpr(was []*withArgExpr, e Expr) (Expr, error) {
 		if wa == nil {
 			return t, nil
 		}
-		eNew, err := expandWithExprExt(was, wa, nil)
+		eNew, err := expandWithExprExt(was, wa, nil, budget)
 		if err != nil {
 			return nil, err
 		}
@@ -1086,10 +1134,10 @@ func prependMetricNameFilter(lfs []LabelFilter, metricName string) []LabelFilter
 	return append([]LabelFilter{lf}, lfs...)
 }
 
-func expandWithArgs(was []*withArgExpr, args []Expr) ([]Expr, error) {
+func expandWithArgs(was []*withArgExpr, args []Expr, budget *int) ([]Expr, error) {
 	dstArgs := make([]Expr, len(args))
 	for i, arg := range args {
-		dstArg, err := expandWithExpr(was, arg)
+		dstArg, err := expandWithExpr(was, arg, budget)
 		if err != nil {
 			return nil, err
 		}
@@ -1098,7 +1146,7 @@ func expandWithArgs(was []*withArgExpr, args []Expr) ([]Expr, error) {
 	return dstArgs, nil
 }
 
-func expandDuration(was []*withArgExpr, d *DurationExpr) (*DurationExpr, error) {
+func expandDuration(was []*withArgExpr, d *DurationExpr, budget *int) (*DurationExpr, error) {
 	if d == nil {
 		return nil, nil
 	}
@@ -1109,7 +1157,7 @@ func expandDuration(was []*withArgExpr, d *DurationExpr) (*DurationExpr, error) 
 	if wa == nil {
 		return nil, fmt.Errorf("cannot find WITH template for %q", d.s)
 	}
-	e, err := expandWithExprExt(was, wa, []Expr{})
+	e, err := expandWithExprExt(was, wa, []Expr{}, budget)
 	if err != nil {
 		return nil, err
 	}
@@ -1180,7 +1228,7 @@ func expandModifierArgs(was []*withArgExpr, args []string) ([]string, error) {
 	return filteredArgs, nil
 }
 
-func expandWithExprExt(was []*withArgExpr, wa *withArgExpr, args []Expr) (Expr, error) {
+func expandWithExprExt(was []*withArgExpr, wa *withArgExpr, args []Expr, budget *int) (Expr, error) {
 	if len(wa.Args) != len(args) {
 		if args == nil {
 			// This case is possible if metric name clashes with one of the WITH template name.
@@ -1203,7 +1251,7 @@ func expandWithExprExt(was []*withArgExpr, wa *withArgExpr, args []Expr) (Expr, 
 			Expr: arg,
 		})
 	}
-	return expandWithExpr(wasNew, wa.Expr)
+	return expandWithExpr(wasNew, wa.Expr, budget)
 }
 
 func newMetricExpr(name string) *MetricExpr {

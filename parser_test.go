@@ -1,6 +1,7 @@
 package metricsql
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -1042,4 +1043,52 @@ func TestParseError(t *testing.T) {
 	f(`m + on(job) fill(0) group_left() n`)
 	f(`m and fill(0) n`)
 	f(`m + bool group_left m2 fill(0)`)
+}
+
+func TestParseDeepExprError(t *testing.T) {
+	f := func(s string) {
+		t.Helper()
+
+		e, err := Parse(s)
+		if err == nil {
+			t.Fatalf("expecting non-nil error when parsing a too complex %d-byte query", len(s))
+		}
+		if e != nil {
+			t.Fatalf("expecting nil expr when parsing a too complex %d-byte query", len(s))
+		}
+		if !strings.Contains(err.Error(), "the query is too complex") {
+			t.Fatalf("expecting a too-complex error when parsing a %d-byte query; got %q", len(s), err)
+		}
+	}
+
+	// Deeply nested or chained queries must return an error instead of
+	// exhausting the goroutine stack in recursive parsing and processing.
+	// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/11932
+
+	// Deeply nested parens.
+	f(strings.Repeat("(", maxExprDepth+1) + "x" + strings.Repeat(")", maxExprDepth+1))
+	// A long chain of unary minuses.
+	f(strings.Repeat("-", maxExprDepth+1) + "x")
+	// Deeply nested function calls.
+	f(strings.Repeat("abs(", maxExprDepth+1) + "x" + strings.Repeat(")", maxExprDepth+1))
+	// Right-associative binary op chain over the depth limit.
+	f("x" + strings.Repeat("^x", 2*maxExprDepth))
+	// Flat binary op chain over the expressions limit.
+	f("x" + strings.Repeat("+x", maxExprNodes+1))
+	// `WITH` templates expanding a small query exponentially.
+	f("WITH (f(x)=x+x) " + strings.Repeat("f(", 100) + "y" + strings.Repeat(")", 100))
+}
+
+func TestParseDeepExprSuccess(t *testing.T) {
+	// An expression nested right under the depth limit is still parsed.
+	q := strings.Repeat("(", maxExprDepth-1) + "x" + strings.Repeat(")", maxExprDepth-1)
+	if _, err := Parse(q); err != nil {
+		t.Fatalf("unexpected error when parsing a nested query: %s", err)
+	}
+
+	// A long flat binary op chain under the expressions limit is still parsed.
+	q = "x" + strings.Repeat("+x", maxExprNodes/10)
+	if _, err := Parse(q); err != nil {
+		t.Fatalf("unexpected error when parsing a flat query: %s", err)
+	}
 }
