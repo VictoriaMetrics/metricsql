@@ -648,6 +648,7 @@ func TestParseSuccess(t *testing.T) {
 	another(`with(sum=123,now=5) union(with(sum=3,f(x)=x*sum) f(2) + f(3), with(x=5,sum=2) x*sum*now)`, `union(15, 50)`)
 	another(`WITH(now = sum(rate(my_metric_total)), before = sum(rate(my_metric_total) offset 1h)) now/before*100`, `(sum(rate(my_metric_total)) / sum(rate(my_metric_total) offset 1h)) * 100`)
 	another(`with (sum = x) sum`, `x`)
+	another(`WITH (s="ab", f(x)=x+x) f(f(s))`, `"abababab"`)
 	another(`with (clamp_min=x) clamp_min`, `x`)
 	another(`with (now=now(), sum=sum()) now`, `now()`)
 	another(`with (now=now(), sum=sum()) now()`, `now()`)
@@ -1077,6 +1078,11 @@ func TestParseDeepExprError(t *testing.T) {
 	f("x" + strings.Repeat("+x", maxExprNodes+1))
 	// `WITH` templates expanding a small query exponentially.
 	f("WITH (f(x)=x+x) " + strings.Repeat("f(", 100) + "y" + strings.Repeat(")", 100))
+	// String templates can double the resulting string on every expansion
+	// level while producing a single AST node, so the expansion is also
+	// bounded by the total size of produced string data.
+	f(`WITH (s="` + strings.Repeat("a", 4096) + `", f(x)=x+x) ` + strings.Repeat("f(", 20) + "s" + strings.Repeat(")", 20))
+	f(`WITH (s="` + strings.Repeat("a", 4096) + `", g(x)="a"+x+x) ` + strings.Repeat("g(", 20) + "s" + strings.Repeat(")", 20))
 }
 
 func TestParseDeepExprSuccess(t *testing.T) {

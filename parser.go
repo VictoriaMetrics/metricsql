@@ -23,6 +23,21 @@ const maxExprNodes = 100_000
 // budget is shared across the whole expansion pass.
 const maxExpandedExprNodes = 100_000
 
+// maxExpandedStringBytes limits the total number of bytes of string data a
+// query may expand to while resolving `WITH` templates. String concatenation
+// and templated strings can double their size on every expansion level while
+// producing a single AST node, so the node budget alone cannot bound memory
+// usage.
+const maxExpandedStringBytes = 4 << 20
+
+// expandBudget tracks the resources a `WITH` expansion may consume. nodes
+// bounds the number of expanded expressions; stringBytes bounds the total
+// size of string data the expansion produces.
+type expandBudget struct {
+	nodes       int
+	stringBytes int
+}
+
 // Parse parses MetricsQL query s.
 //
 // All the `WITH` expressions are expanded in the returned Expr.
@@ -37,8 +52,11 @@ func Parse(s string) (Expr, error) {
 
 	// Expand `WITH` expressions.
 	was := getDefaultWithArgExprs()
-	budget := maxExpandedExprNodes
-	if e, err = expandWithExpr(was, e, &budget); err != nil {
+	budget := &expandBudget{
+		nodes:       maxExpandedExprNodes,
+		stringBytes: maxExpandedStringBytes,
+	}
+	if e, err = expandWithExpr(was, e, budget); err != nil {
 		return nil, fmt.Errorf(`cannot expand WITH expressions: %s`, err)
 	}
 	e = removeParensExpr(e)
@@ -783,9 +801,9 @@ funcArgsLabel:
 	}
 }
 
-func expandWithExpr(was []*withArgExpr, e Expr, budget *int) (Expr, error) {
-	*budget = *budget - 1
-	if *budget < 0 {
+func expandWithExpr(was []*withArgExpr, e Expr, budget *expandBudget) (Expr, error) {
+	budget.nodes--
+	if budget.nodes < 0 {
 		return nil, fmt.Errorf("the query is too complex: WITH expansion produces more than %d expressions", maxExpandedExprNodes)
 	}
 	switch t := e.(type) {
@@ -822,6 +840,11 @@ func expandWithExpr(was []*withArgExpr, e Expr, budget *int) (Expr, error) {
 			lse, lok := left.(*StringExpr)
 			rse, rok := right.(*StringExpr)
 			if lok && rok {
+				size := len(lse.S) + len(rse.S)
+				budget.stringBytes -= size
+				if budget.stringBytes < 0 {
+					return nil, fmt.Errorf("the query is too complex: WITH expansion produces more than %d bytes of strings", maxExpandedStringBytes)
+				}
 				se := &StringExpr{
 					S: lse.S + rse.S,
 				}
@@ -903,6 +926,10 @@ func expandWithExpr(was []*withArgExpr, e Expr, budget *int) (Expr, error) {
 				panic(fmt.Errorf("BUG: seSrc.tokens must be empty; got %q", seSrc.tokens))
 			}
 			b = append(b, seSrc.S...)
+		}
+		budget.stringBytes -= len(b)
+		if budget.stringBytes < 0 {
+			return nil, fmt.Errorf("the query is too complex: WITH expansion produces more than %d bytes of strings", maxExpandedStringBytes)
 		}
 		se := &StringExpr{
 			S: string(b),
@@ -1134,7 +1161,7 @@ func prependMetricNameFilter(lfs []LabelFilter, metricName string) []LabelFilter
 	return append([]LabelFilter{lf}, lfs...)
 }
 
-func expandWithArgs(was []*withArgExpr, args []Expr, budget *int) ([]Expr, error) {
+func expandWithArgs(was []*withArgExpr, args []Expr, budget *expandBudget) ([]Expr, error) {
 	dstArgs := make([]Expr, len(args))
 	for i, arg := range args {
 		dstArg, err := expandWithExpr(was, arg, budget)
@@ -1146,7 +1173,7 @@ func expandWithArgs(was []*withArgExpr, args []Expr, budget *int) ([]Expr, error
 	return dstArgs, nil
 }
 
-func expandDuration(was []*withArgExpr, d *DurationExpr, budget *int) (*DurationExpr, error) {
+func expandDuration(was []*withArgExpr, d *DurationExpr, budget *expandBudget) (*DurationExpr, error) {
 	if d == nil {
 		return nil, nil
 	}
@@ -1228,7 +1255,7 @@ func expandModifierArgs(was []*withArgExpr, args []string) ([]string, error) {
 	return filteredArgs, nil
 }
 
-func expandWithExprExt(was []*withArgExpr, wa *withArgExpr, args []Expr, budget *int) (Expr, error) {
+func expandWithExprExt(was []*withArgExpr, wa *withArgExpr, args []Expr, budget *expandBudget) (Expr, error) {
 	if len(wa.Args) != len(args) {
 		if args == nil {
 			// This case is possible if metric name clashes with one of the WITH template name.
